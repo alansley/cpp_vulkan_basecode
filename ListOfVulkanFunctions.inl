@@ -29,6 +29,7 @@ GLOBAL_LEVEL_VULKAN_FUNCTION( vkCreateInstance )
 // Note: Instance-level functions are mainly used for operations on physical devices (e.g., checking their
 // properties & abilities, and creating logical devices on which we can actually draw!).
 INSTANCE_LEVEL_VULKAN_FUNCTION( vkEnumeratePhysicalDevices )
+INSTANCE_LEVEL_VULKAN_FUNCTION( vkEnumerateDeviceExtensionProperties )
 INSTANCE_LEVEL_VULKAN_FUNCTION( vkGetPhysicalDeviceProperties )
 INSTANCE_LEVEL_VULKAN_FUNCTION( vkGetPhysicalDeviceFeatures )
 INSTANCE_LEVEL_VULKAN_FUNCTION( vkCreateDevice )

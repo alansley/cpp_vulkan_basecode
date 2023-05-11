@@ -250,7 +250,7 @@ int main()
 	};
 
 	// Actually create the Vulkan instance! Note: The vulkan instance itself is an `opaque handle` - we can't get any details from it directly.
-	// Source: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
+	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 	VkInstance vulkanInstance;
 	const VkResult instanceCreationResult = VulkanFunctionLoaders::vkCreateInstance(&instanceCreateInfo, nullptr, &vulkanInstance);
 	if (instanceCreationResult != VK_SUCCESS || vulkanInstance == VK_NULL_HANDLE)
@@ -277,6 +277,64 @@ int main()
 		return -8;
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded from extensions." << endl; }
+	
+	// Enumerate available physical devices (from which we will access LOGICAL devices that will perform our work!)
+	// Note: Like our VkInstance, VkPhysicalDevice is an opaque handle.
+	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDevice.html
+	// IMPORTANT: We essentially do this process twice - first to find out how many physical devices we have, and then again to actually
+	// populate a vector of VkPhysicalDevice. While we could combine these two passes into a single one, we don't know the vector size
+	// when we go to populate it so rather than go off-road let's stay with the book's way of doing it (Vulcan Cookbook, p36-37).37 for details.
+	uint32_t physicalDeviceCount = 0;	
+	result = VK_SUCCESS;
+	result = VulkanFunctionLoaders::vkEnumeratePhysicalDevices(vulkanInstance, &physicalDeviceCount, nullptr);
+	if (result != VK_SUCCESS || physicalDeviceCount == 0)
+	{
+		cout << "[FAIL] Could not enumerate physical devices. Physical devices found: " << physicalDeviceCount << endl;
+		return -9;
+	}
+	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceCount << " physical device(s)." << endl; }
 
-	// Now...
+	// I'm not going to build the kitchen sink into this basecode when I've yet to draw one red triangle! K.I.S.S.!
+	if (physicalDeviceCount > 1)
+	{
+		cout << "[WARNING] Found multiple physical devices - we're only going to work with the first one found (0) for now to keep the code manageable." << endl;
+	}
+
+	std::vector<VkPhysicalDevice> availablePhysicalDevices(physicalDeviceCount);
+	result = VK_SUCCESS;
+	result = VulkanFunctionLoaders::vkEnumeratePhysicalDevices(vulkanInstance, &physicalDeviceCount, availablePhysicalDevices.data());
+	if (result != VK_SUCCESS || physicalDeviceCount == 0)
+	{
+		cout << "[FAIL] Could populate details of physical devices. Physical devices found: " << physicalDeviceCount << endl;
+		return -10;
+	}
+	if (VERBOSE) { cout << "[OK] Populated details of " << physicalDeviceCount << " physical device(s)." << endl; }
+
+	// Enumerate properties of available physical devices.
+	// Note: Again we do this as a two-step - first we find the number of extensions for a physical device, then we populate details (p40)
+	uint32_t physicalDeviceExtensionCount = 0;
+	result = VK_SUCCESS;
+	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(availablePhysicalDevices[0], nullptr, &physicalDeviceExtensionCount, nullptr);
+	if (result != VK_SUCCESS || physicalDeviceExtensionCount == 0)
+	{
+		cout << "[FAIL] Could not enumerate physical device extensions. Physical devices extension count: " << physicalDeviceExtensionCount << endl;
+		return -11;
+	}
+	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceExtensionCount << " extensions for physical device 0." << endl; }
+
+	std::vector<VkExtensionProperties> physicalDeviceExtensionProperties(physicalDeviceExtensionCount);
+	result = VK_SUCCESS;
+	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(availablePhysicalDevices[0], nullptr, &physicalDeviceExtensionCount, physicalDeviceExtensionProperties.data());
+	if (result != VK_SUCCESS || physicalDeviceExtensionCount == 0)
+	{
+		cout << "[FAIL] Could populate physical device 0 extension properties. Physical device 0 extensions found: " << physicalDeviceExtensionCount << endl;
+		return -12;
+	}
+	if (VERBOSE) { cout << "[OK] Populated " << physicalDeviceExtensionCount << " extension properties for physical device 0." << endl; }
+	
+
+	// Check available physical device extensions (so we can be sure to choose create a logical device on a physical device which
+	// supports our desired extensions).
+
+
 }
