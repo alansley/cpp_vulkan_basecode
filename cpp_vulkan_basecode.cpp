@@ -5,6 +5,9 @@
 
 using std::cout, std::endl, std::string;
 
+// Vulkan requires an application name and engine name when creating an instance. This is so that AAA games
+// can provide specific details which driver vendors like Nvidia and AMD can then check for to enable or
+// disable specific driver logic. That's it - that's the entire purpose.
 const string ApplicationName = "cpp_vulkan_basecode";
 const string EngineName = "ACL_vulkan_engine";
 
@@ -84,7 +87,7 @@ if( VulkanFunctionLoaders::name == nullptr ) {                                  
 	{
 #define GLOBAL_LEVEL_VULKAN_FUNCTION( name )                \
 name = (PFN_##name)vkGetInstanceProcAddr( nullptr, #name ); \
-if( name == nullptr ) {                                     \
+if (name == nullptr) {                                      \
 std::cout << "Could not load global-level function named: " \
 #name << std::endl; \
 return false; \
@@ -100,6 +103,39 @@ return false; \
 			if (strstr(available_extension.extensionName, extension)) {	return true; }
 		}
 		return false;
+	}
+
+	// Method to load Vulkan instance-level functions for the provided instance
+	bool LoadInstanceLevelFunctions(VkInstance &vulkanInstance)
+	{
+#define INSTANCE_LEVEL_VULKAN_FUNCTION( name )                      \
+name = (PFN_##name)vkGetInstanceProcAddr( vulkanInstance, #name );  \
+if( name == nullptr ) {                                             \
+std::cout << "Could not load instance-level Vulkan function named: "\
+#name << " for instance: " << vulkanInstance << std::endl;          \
+return false;                                                       \
+}
+#include "ListOfVulkanFunctions.inl"
+
+		return true;
+	}
+
+	// Method to load an instance-level function from a specific extension (which must be available and loaded)
+	bool LoadInstanceLevelFunctionFromExtension(VkInstance& vulkanInstance, std::vector<char const*> enabledExtensions)
+	{
+#define INSTANCE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION( name, extension )  \
+for (auto &enabledExtension : enabledExtensions) {                        \
+if (std::string(enabledExtension) == std::string(extension)) {            \
+name = (PFN_##name)vkGetInstanceProcAddr(vulkanInstance, #name);          \
+if (name == nullptr) {                                                    \
+std::cout << "Could not load instance-level Vulkan function named: "      \
+#name << std::endl;                                                       \
+return false;                                                             \
+}                                                                         \
+}                                                                         \
+}
+#include "ListOfVulkanFunctions.inl"
+		return true;
 	}
 
 } // End of namespace VulkanFunctionLoaders
@@ -165,7 +201,7 @@ int main()
 		if (VERBOSE)
 		{
 			std::cout << "Extension details:" << std::endl;
-			for (int i = 0; i < instanceExtensionsCount; ++i)
+			for (unsigned int i = 0; i < instanceExtensionsCount; ++i)
 			{
 				cout << "\t" << availableExtensions[i].extensionName << " - version: " << availableExtensions[i].specVersion << endl;
 			}
@@ -175,10 +211,10 @@ int main()
 	// Make all the extensions available for use
 	// Note: If we only wanted to make SOME extensions available then we would add them to the desiredExtensions vector directly then check that they ARE available
 	std::vector<char const*> desiredExtensions(instanceExtensionsCount);
-	for (int i = 0; i < instanceExtensionsCount; ++i) { desiredExtensions[i] = availableExtensions[i].extensionName; }
+	for (unsigned int i = 0; i < instanceExtensionsCount; ++i) { desiredExtensions[i] = availableExtensions[i].extensionName; }
 
 	// Check that all the desired extensions are available. If a desiredExtension was "DoesNotExist" or such then we'll return a failure code.
-	for (int i = 0; i < instanceExtensionsCount; ++i)
+	for (unsigned int i = 0; i < instanceExtensionsCount; ++i)
 	{
 		const bool supported = VulkanFunctionLoaders::IsExtensionSupported(availableExtensions, desiredExtensions[i]);
 		if (!supported)
@@ -213,7 +249,8 @@ int main()
 		!desiredExtensions.empty() ? desiredExtensions.data() : nullptr
 	};
 
-	// Actually create the Vulkan instance!
+	// Actually create the Vulkan instance! Note: The vulkan instance itself is an `opaque handle` - we can't get any details from it directly.
+	// Source: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 	VkInstance vulkanInstance;
 	const VkResult instanceCreationResult = VulkanFunctionLoaders::vkCreateInstance(&instanceCreateInfo, nullptr, &vulkanInstance);
 	if (instanceCreationResult != VK_SUCCESS || vulkanInstance == VK_NULL_HANDLE)
@@ -221,5 +258,25 @@ int main()
 		cout << "[FAIL] Could not create Vulkan Instance." << endl;
 		return -6;
 	}
+	if (VERBOSE) { cout << "[OK] Vulkan instance created." << endl; }
 
+	// Load our instance-level functions
+	const bool instanceLevelFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctions(vulkanInstance);
+	if (!instanceLevelFunctionsLoaded)
+	{
+		cout << "[FAIL]: Vulkan instance level functions could not be loaded." << endl;
+		return -7;
+	}
+	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded." << endl; }
+
+	// Now load the instance-level functions that are provided by our extensions
+	const bool instanceLevelExtensionFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctionFromExtension(vulkanInstance, desiredExtensions);
+	if (!instanceLevelExtensionFunctionsLoaded)
+	{
+		cout << "[FAIL]: Vulkan instance level functions could not be loaded from extensions." << endl;
+		return -8;
+	}
+	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded from extensions." << endl; }
+
+	// Now...
 }

@@ -14,15 +14,15 @@ namespace VulkanFunctionLoaders
 
 // Note: In Vulkan there are only 3 global-level functions: `vkEnumerateInstanceExtensionProperties`, `vkEnumerateInstanceLayerProperties`, and `vkCreateInstance`.
 //       These are used during Instance creation to check what instance-level extensions and layers are available and to create the Instance itself.
-#define GLOBAL_LEVEL_VULKAN_FUNCTION(name) extern PFN_##name name;
+#define GLOBAL_LEVEL_VULKAN_FUNCTION( name ) extern PFN_##name name;
 
-#define INSTANCE_LEVEL_VULKAN_FUNCTION(name) extern PFN_##name name;
+#define INSTANCE_LEVEL_VULKAN_FUNCTION( name ) extern PFN_##name name;
 
-#define INSTANCE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(name,	extension) extern PFN_##name name;
+#define INSTANCE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION( name, extension ) extern PFN_##name name;
 
-#define DEVICE_LEVEL_VULKAN_FUNCTION(name) extern PFN_##name name;
+#define DEVICE_LEVEL_VULKAN_FUNCTION( name ) extern PFN_##name name;
 
-#define DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(name, extension) extern PFN_##name name;
+#define DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION( name, extension ) extern PFN_##name name;
 
 #include "ListOfVulkanFunctions.inl"
 
