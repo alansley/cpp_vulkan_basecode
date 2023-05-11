@@ -4,9 +4,8 @@
 #include <iostream>
 
 // Note: Windows.h is required to call `LoadLibrary` to pull in `vulkan-1.dll`
+// Also: When we build for x64 `_WIN32` is still defined - so take this as "We're on Windows" rather than "We're on Windows building in x86 / 32-bit mode"
 #if defined _WIN32
-	#include <Windows.h>
-#elif defined _WIN64
 	#include <Windows.h>
 #endif
 
@@ -17,7 +16,20 @@
 	#define LIBRARY_TYPE void*
 #endif
 
-// Vulkan
+// Vulkan function loader command
+#ifdef _WIN32
+	#define LoadFunction GetProcAddress
+#elif defined __linux
+	#define LoadFunction dlsym
+#endif
+
+
+#ifdef _WIN32
+	#define NAME "We got loaded in _WIN32!"
+#else
+	#define NAME "We DID NOT got loaded in _WIN32!"
+#endif
+
 
 //#include "include/vulkan/vk_platform.h"
 #define VK_NO_PROTOTYPES   // In this example we'll load the functions that we need only, rather than pull in all the prototypes from vulkan.h
@@ -45,30 +57,62 @@ bool ConnectWithVulkanLoaderLibrary(LIBRARY_TYPE& vulkan_library)
 
 #include "VulkanFunctions.h"
 
-/***
------ THIS PART IS NOT WORKING PROPERLY TO LOAD ALL THE FUNCTIONS LISTED IN `ListOfVulkanFunctions.inl` -----
 
-bool LoadFunctionExportedFromVulkanLoaderLibrary(LIBRARY_TYPE const& vulkan_library)
+
+
+namespace VulkanFunctionLoaders
 {
-#if defined _WIN32
-	#define LoadFunction GetProcAddress
+	bool LoadFunctionExportedFromVulkanLoaderLibrary(LIBRARY_TYPE const& vulkan_library)
+	{
+
+		// Vulkan function loader command
+#ifdef _WIN32
+#define LOAD_FUNCTION GetProcAddress
 #elif defined __linux
-	#define LoadFunction dlsym
+#define LOAD_FUNCTION dlsym
 #endif
 
-#define EXPORTED_VULKAN_FUNCTION(name)                                \
-    name = (PFN_##name)LoadFunction(vulkan_library, #name);           \
-    if (name == nullptr) {                                            \
-      std::cout << "Could not load exported Vulkan function named: "  \
-        #name << std::endl;                                           \
-      return false;                                                   \
-    }
+#define EXPORTED_VULKAN_FUNCTION( name )                                \
+VulkanFunctionLoaders::name = (PFN_##name)LOAD_FUNCTION( vulkan_library, #name ); \
+if( VulkanFunctionLoaders::name == nullptr ) {                                    \
+  std::cout << "Could not load exported Vulkan function named: "        \
+    #name << std::endl;                                                 \
+  return false;                                                         \
+}
 
 #include "ListOfVulkanFunctions.inl"
 
-	return true;
+		return true;
+	}
+
+} // End of namespace VulkanFunctionLoaders
+
+
+
+template <typename functionType>
+functionType performLoadFunction(LIBRARY_TYPE const& vulkanLibrary, std::string functionName)
+{
+#define FUCK_EXPORTED_VULKAN_FUNCTION(name) PFN_##name functionName;
+
+
+	//#define FunctionTypeZ PFN_##functionName functionName;
+
+	//auto vkGetInstanceProcAddr = (FUCK_EXPORTED_VULKAN_FUNCTION(functionName))LoadFunction(vulkanLibrary, functionName.c_str());
+
+	auto vkGetInstanceProcAddr = const_cast<functionType>(LoadFunction(vulkanLibrary, functionName.c_str()));
+	
+	//auto vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(LoadFunction(vulkanLibrary, functionName.c_str()));
+
+	if (vkGetInstanceProcAddr == nullptr)
+	{
+		std::cout << "[FAIL] Could not find address of function: " << functionName << std::endl;
+	}
+	else
+	{
+		std::cout << "[OK] Successfully found address of function: " << functionName << " (" << vkGetInstanceProcAddr << ")" << std::endl;
+	}
+	return vkGetInstanceProcAddr; // This will be nullptr if we could not load the function
 }
-*/
 
 int main()
 {
@@ -97,18 +141,27 @@ int main()
 
 	/*** STRUGGLING WITH AUTOMATICALLY LOADING ALL FUNCTIONS DECLARED IN `ListOfVulkanFunctions.inl` - BUT WE CAN USE THE BELOW ONE-AT-A-TIME! ***/
 	// Load all functions we've specified in `ListOfVulkanFunctions.ink` automatically
-	//bool loadFunctionSuccess = LoadFunctionExportedFromVulkanLoaderLibrary(vulkanLibrary);
-	
-	
+	bool loadFunctionSuccess = VulkanFunctionLoaders::LoadFunctionExportedFromVulkanLoaderLibrary(vulkanLibrary);
+	if (loadFunctionSuccess)
+	{
+		std::cout << "NAILED IT!" << std::endl;
+	}
+		
+
+
 	// To load a function manually, use:
 	std::string functionName = "vkGetInstanceProcAddr";
-	auto vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)GetProcAddress(vulkanLibrary, functionName.c_str());
+	//auto vkGetInstanceProcAddre = performLoadFunction<>()
+
+	/*
+	auto vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)LoadFunction(vulkanLibrary, functionName.c_str());
 	if (vkGetInstanceProcAddr == nullptr)
 	{
 		std::cout << "[FAIL] Could not find address of function: " << functionName << std::endl;
 	}
 	std::cout << "[OK] Successfully found address of function: " << functionName << " (" << vkGetInstanceProcAddr << ")" << std::endl;
+	*/
 
-
+	std::cout << "Name define is: " << NAME << std::endl;
 	
 }

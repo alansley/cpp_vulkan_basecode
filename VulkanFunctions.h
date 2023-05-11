@@ -1,15 +1,16 @@
-#pragma once
+#ifndef VULKAN_FUNCTIONS_H
+#define VULKAN_FUNCTIONS_H
 
 #include "vulkan.h"
 
 // Note: Always put declarations & definitions to Vulkan functions inside a namespace, as if they are global they can cause issues on some OSs.
 // Source: Vulkan Cookbook [2016], p20
-namespace VulkanCookbook
+namespace VulkanFunctionLoaders
 {
 	// Note: The ## operator in the preprocessor concatenates things, so for example if we specified:
 	//			EXPORTED_VULKAN_FUNCTION(dave) then the extern name of the function would be "PFN_dave"
 
-#define EXPORTED_VULKAN_FUNCTION(name) extern PFN_##name name;
+#define EXPORTED_VULKAN_FUNCTION( name ) extern PFN_##name name;
 
 #define GLOBAL_LEVEL_VULKAN_FUNCTION(name) extern PFN_##name name;
 
@@ -23,4 +24,6 @@ namespace VulkanCookbook
 
 #include "ListOfVulkanFunctions.inl"
 
-} // namespace VulkanCookbook
+} // End of namespace VulkanFunctionLoaders
+
+#endif
