@@ -2,6 +2,7 @@
 #define EXPORTED_VULKAN_FUNCTION( function ) 
 #endif 
 
+// Note: This instance process address is the gateway through which we load all other Vulkan functions
 EXPORTED_VULKAN_FUNCTION( vkGetInstanceProcAddr )
 
 #undef EXPORTED_VULKAN_FUNCTION
@@ -9,6 +10,12 @@ EXPORTED_VULKAN_FUNCTION( vkGetInstanceProcAddr )
 #ifndef GLOBAL_LEVEL_VULKAN_FUNCTION
 #define GLOBAL_LEVEL_VULKAN_FUNCTION(function)
 #endif
+
+// Note: These 3 are the only global level Vulkan functions that exist!
+GLOBAL_LEVEL_VULKAN_FUNCTION( vkEnumerateInstanceExtensionProperties )
+GLOBAL_LEVEL_VULKAN_FUNCTION( vkEnumerateInstanceLayerProperties )
+GLOBAL_LEVEL_VULKAN_FUNCTION( vkCreateInstance )
+
 #undef GLOBAL_LEVEL_VULKAN_FUNCTION
 //
 #ifndef INSTANCE_LEVEL_VULKAN_FUNCTION

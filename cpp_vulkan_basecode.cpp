@@ -3,6 +3,9 @@
 
 #include <iostream>
 
+using std::cout, std::endl;
+
+
 // Note: Windows.h is required to call `LoadLibrary` to pull in `vulkan-1.dll`
 // Also: When we build for x64 `_WIN32` is still defined - so take this as "We're on Windows" rather than "We're on Windows building in x86 / 32-bit mode"
 #if defined _WIN32
@@ -23,16 +26,10 @@
 	#define LoadFunction dlsym
 #endif
 
-
-#ifdef _WIN32
-	#define NAME "We got loaded in _WIN32!"
-#else
-	#define NAME "We DID NOT got loaded in _WIN32!"
-#endif
-
-
 //#include "include/vulkan/vk_platform.h"
 #define VK_NO_PROTOTYPES   // In this example we'll load the functions that we need only, rather than pull in all the prototypes from vulkan.h
+#include <vector>
+
 #include "vulkan/vulkan.h" // Note: "vulkan.h" includes "vk_platform.h" amongst other things
 
 // Method to connect to the Vulkan loader library
@@ -46,38 +43,26 @@ bool ConnectWithVulkanLoaderLibrary(LIBRARY_TYPE& vulkan_library)
 	vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
 #endif
 
-	if (vulkan_library == nullptr) {
-		std::cout << "[FAIL] Could not connect with a Vulkan Runtime library." << std::endl;
-		return false;
-	}
-	// Implied else
-	std::cout << "[OK] Successfully connected to the Vulkan Runtime Library!" << std::endl;
-	return true;
+	return vulkan_library != nullptr; // Returns false if the vulkan_library is null, true (i.e., success) otherwise
 }
 
 #include "VulkanFunctions.h"
 
 
 
-
+// Note: I fixed this via the commend from `bodyaka` at: https://stackoverflow.com/questions/63587107/undeclared-identifier-when-defining-macro-to-load-vulkan-function-pointers
+// Be sure to thank him & maybe link to this repo at some point.
 namespace VulkanFunctionLoaders
 {
 	bool LoadFunctionExportedFromVulkanLoaderLibrary(LIBRARY_TYPE const& vulkan_library)
 	{
 
-		// Vulkan function loader command
-#ifdef _WIN32
-#define LOAD_FUNCTION GetProcAddress
-#elif defined __linux
-#define LOAD_FUNCTION dlsym
-#endif
-
-#define EXPORTED_VULKAN_FUNCTION( name )                                \
-VulkanFunctionLoaders::name = (PFN_##name)LOAD_FUNCTION( vulkan_library, #name ); \
-if( VulkanFunctionLoaders::name == nullptr ) {                                    \
-  std::cout << "Could not load exported Vulkan function named: "        \
-    #name << std::endl;                                                 \
-  return false;                                                         \
+#define EXPORTED_VULKAN_FUNCTION( name )                                         \
+VulkanFunctionLoaders::name = (PFN_##name)LoadFunction( vulkan_library, #name ); \
+if( VulkanFunctionLoaders::name == nullptr ) {                                   \
+  std::cout << "Could not load exported Vulkan function named: "                 \
+    #name << std::endl;                                                          \
+  return false;                                                                  \
 }
 
 #include "ListOfVulkanFunctions.inl"
@@ -85,83 +70,87 @@ if( VulkanFunctionLoaders::name == nullptr ) {                                  
 		return true;
 	}
 
+	bool LoadVulkanGlobalFunctions()
+	{
+#define GLOBAL_LEVEL_VULKAN_FUNCTION( name )                \
+name = (PFN_##name)vkGetInstanceProcAddr( nullptr, #name ); \
+if( name == nullptr ) {                                     \
+std::cout << "Could not load global-level function named: " \
+#name << std::endl; \
+return false; \
+}
+#include "ListOfVulkanFunctions.inl"
+		return true;
+	}
+
 } // End of namespace VulkanFunctionLoaders
 
 
-
-template <typename functionType>
-functionType performLoadFunction(LIBRARY_TYPE const& vulkanLibrary, std::string functionName)
-{
-#define FUCK_EXPORTED_VULKAN_FUNCTION(name) PFN_##name functionName;
-
-
-	//#define FunctionTypeZ PFN_##functionName functionName;
-
-	//auto vkGetInstanceProcAddr = (FUCK_EXPORTED_VULKAN_FUNCTION(functionName))LoadFunction(vulkanLibrary, functionName.c_str());
-
-	auto vkGetInstanceProcAddr = const_cast<functionType>(LoadFunction(vulkanLibrary, functionName.c_str()));
-	
-	//auto vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(LoadFunction(vulkanLibrary, functionName.c_str()));
-
-	if (vkGetInstanceProcAddr == nullptr)
-	{
-		std::cout << "[FAIL] Could not find address of function: " << functionName << std::endl;
-	}
-	else
-	{
-		std::cout << "[OK] Successfully found address of function: " << functionName << " (" << vkGetInstanceProcAddr << ")" << std::endl;
-	}
-	return vkGetInstanceProcAddr; // This will be nullptr if we could not load the function
-}
-
 int main()
 {
-	//auto vulkan_library = LoadLibrary("vulkan-1.dll");
+	const bool VERBOSE = true;
 
-	//HMODULE vulkan_library = LoadLibrary(LPCWSTR("C:\\Users\\r3dux\\Desktop\\cpp_vulkan_basecode\\x64\\Debug\\vulkan-1.dll"));
-
-	// IMPORTANT: Do not try to connect to the Vulkan DLL with: `LPCWSTR("vulkan-1.dll")` - this won't work! Instead have the type cast as `TEXT` as per below!
-	/*
-	LIBRARY_TYPE vulkan_library = LoadLibrary(TEXT("vulkan-1.dll"));
-	if (vulkan_library == nullptr)
-	{
-		std::cout << "[FAIL] Could not connect with a Vulkan Runtime library." << std::endl;
-		return -1;
-	}
-	else
-	{
-		std::cout << "[OK] Successfully connected to the Vulkan Runtime Library!" << std::endl;
-	}
-	*/
-
-
+	// Connect to the Vulkan loader library. Note: `LIBRARY_TYPE` is a macro that makes the result a `HMODULE` on Windows and a `void*` on Linux.
 	LIBRARY_TYPE vulkanLibrary;
 	bool connectedToVulkanLoader = ConnectWithVulkanLoaderLibrary(vulkanLibrary);
+	if (!connectedToVulkanLoader)
+	{
+		cout << "[FAIL] Could not connect to Vulkan loader library." << endl;
+		return -1;
+	}
+	if (VERBOSE) { cout << "[OK] Connected to Vulkan loader library." << endl; }
 
 
 	/*** STRUGGLING WITH AUTOMATICALLY LOADING ALL FUNCTIONS DECLARED IN `ListOfVulkanFunctions.inl` - BUT WE CAN USE THE BELOW ONE-AT-A-TIME! ***/
 	// Load all functions we've specified in `ListOfVulkanFunctions.ink` automatically
 	bool loadFunctionSuccess = VulkanFunctionLoaders::LoadFunctionExportedFromVulkanLoaderLibrary(vulkanLibrary);
-	if (loadFunctionSuccess)
+	if (!loadFunctionSuccess)
 	{
-		std::cout << "NAILED IT!" << std::endl;
+		cout << "[FAIL] Failed to load Vulkan loader function." << endl;
+		return -1;		
 	}
-		
+	if (VERBOSE) { cout << "[OK] Successfully loaded Vulkan loader function." << endl; }
 
-
-	// To load a function manually, use:
-	std::string functionName = "vkGetInstanceProcAddr";
-	//auto vkGetInstanceProcAddre = performLoadFunction<>()
-
-	/*
-	auto vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)LoadFunction(vulkanLibrary, functionName.c_str());
-	if (vkGetInstanceProcAddr == nullptr)
+	bool loadGlobalFunctionsSuccess = VulkanFunctionLoaders::LoadVulkanGlobalFunctions();
+	if (!loadGlobalFunctionsSuccess)
 	{
-		std::cout << "[FAIL] Could not find address of function: " << functionName << std::endl;
+		cout << "[FAIL] Failed to load Vulkan global functions." << endl;
+		return -2;
 	}
-	std::cout << "[OK] Successfully found address of function: " << functionName << " (" << vkGetInstanceProcAddr << ")" << std::endl;
-	*/
+	if (VERBOSE) { cout << "[OK] Successfully loaded Vulkan global functions." << endl; }
 
-	std::cout << "Name define is: " << NAME << std::endl;
+	uint32_t instanceExtensionsCount = 0;
+	VkResult result = VK_SUCCESS;
+	// Note: Providing null to the third (`pProperties`) argument makes the `vkEnumerateInstanceExtensionProperties` method fill the count at the 2nd argument with the number of extensions found.
+	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, nullptr);
+	if (result != VK_SUCCESS ||	instanceExtensionsCount == 0)
+	{
+		cout << "[FAIL] Could not get the number of Vulkan Instance extensions." << endl;
+		return -3;
+	}
+	else
+	{
+		if (VERBOSE) { cout << "Found " << instanceExtensionsCount << " Vulkan instance extensions." << endl; }
+	}
+
+	// Obtain details regarding the available Vulkan extensions
+	std::vector<VkExtensionProperties> availableExtensions(instanceExtensionsCount);
+	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, &availableExtensions[0]);
+	if (result != VK_SUCCESS || instanceExtensionsCount == 0)
+	{
+		std::cout << "Could not enumerate Instance extension details." << std::endl;
+		return false;
+	}
+	else
+	{
+		if (VERBOSE)
+		{
+			std::cout << "Extension details:" << std::endl;
+			for (int i = 0; i < instanceExtensionsCount; ++i)
+			{
+				cout << "\t" << availableExtensions[i].extensionName << " - version: " << availableExtensions[i].specVersion << endl;
+			}
+		}
+	}
 	
 }
