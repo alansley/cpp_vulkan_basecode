@@ -140,6 +140,225 @@ return false;                                                             \
 
 } // End of namespace VulkanFunctionLoaders
 
+// Method to print out Vulkan physical device features
+// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
+void printPhysicalDeviceFeatures(const VkPhysicalDeviceFeatures &features)
+{
+	cout << "----- Physical Device Features (1 = available, 0 = unavailable) -----"                         << endl;
+	cout << "alphaToOne:                              " << features.alphaToOne                              << endl;
+	cout << "depthBiasClamp:                          " << features.depthBiasClamp                          << endl;
+	cout << "depthBounds:                             " << features.depthBounds                             << endl;
+	cout << "depthClamp:                              " << features.depthClamp                              << endl;
+	cout << "drawIndirectFirstInstance:               " << features.drawIndirectFirstInstance               << endl;
+	cout << "dualSrcBlend:                            " << features.dualSrcBlend                            << endl;
+	cout << "fillModeNonSolid:                        " << features.fillModeNonSolid                        << endl;
+	cout << "fragmentStoresAndAtomics:                " << features.fragmentStoresAndAtomics                << endl;
+	cout << "fullDrawIndexUint32:                     " << features.fullDrawIndexUint32                     << endl;
+	cout << "geometryShader:                          " << features.geometryShader                          << endl;
+	cout << "imageCubeArray:                          " << features.imageCubeArray                          << endl;
+	cout << "independentBlend:                        " << features.independentBlend                        << endl;
+	cout << "inheritedQueries:                        " << features.inheritedQueries                        << endl;
+	cout << "largePoints:                             " << features.largePoints                             << endl;
+	cout << "logicOp:                                 " << features.logicOp                                 << endl;
+	cout << "multiDrawIndirect:                       " << features.multiDrawIndirect                       << endl;
+	cout << "multiViewport:                           " << features.multiViewport                           << endl;
+	cout << "occlusionQueryPrecise:                   " << features.occlusionQueryPrecise                   << endl;
+	cout << "pipelineStatisticsQuery:                 " << features.pipelineStatisticsQuery                 << endl;
+	cout << "robustBufferAccess:                      " << features.robustBufferAccess                      << endl;
+	cout << "samplerAnisotropy:                       " << features.samplerAnisotropy                       << endl;
+	cout << "sampleRateShading:                       " << features.sampleRateShading                       << endl;	
+	cout << "shaderClipDistance:                      " << features.shaderClipDistance                      << endl;
+	cout << "shaderCullDistance:                      " << features.shaderCullDistance                      << endl;
+	cout << "shaderFloat64:                           " << features.shaderFloat64                           << endl;
+	cout << "shaderImageGatherExtended:               " << features.shaderImageGatherExtended               << endl;
+	cout << "shaderInt16:                             " << features.shaderInt16                             << endl;
+	cout << "shaderInt64:                             " << features.shaderInt64                             << endl;
+	cout << "shaderResourceMinLod:                    " << features.shaderResourceMinLod                    << endl;
+	cout << "shaderResourceResidency:                 " << features.shaderResourceResidency                 << endl;
+	cout << "shaderSampledImageArrayDynamicIndexing:  " << features.shaderSampledImageArrayDynamicIndexing  << endl;
+	cout << "shaderStorageBufferArrayDynamicIndexing: " << features.shaderStorageBufferArrayDynamicIndexing << endl;
+	cout << "shaderStorageImageExtendedFormats:       " << features.shaderStorageImageExtendedFormats       << endl;
+	cout << "shaderStorageImageMultisample:           " << features.shaderStorageImageMultisample           << endl;
+	cout << "shaderStorageImageReadWithoutFormat:     " << features.shaderStorageImageReadWithoutFormat     << endl;
+	cout << "shaderStorageImageWriteWithoutFormat:    " << features.shaderStorageImageWriteWithoutFormat    << endl;	
+	cout << "shaderTessellationAndGeometryPointSize:  " << features.shaderTessellationAndGeometryPointSize  << endl;
+	cout << "shaderUniformBufferArrayDynamicIndexing: " << features.shaderUniformBufferArrayDynamicIndexing << endl;
+	cout << "sparseBinding:                           " << features.sparseBinding                           << endl;
+	cout << "sparseResidency16Samples:                " << features.sparseResidency16Samples                << endl;
+	cout << "sparseResidency2Samples:                 " << features.sparseResidency2Samples                 << endl;
+	cout << "sparseResidency4Samples:                 " << features.sparseResidency4Samples                 << endl;
+	cout << "sparseResidency8Samples:                 " << features.sparseResidency8Samples                 << endl;
+	cout << "sparseResidencyAliased:                  " << features.sparseResidencyAliased                  << endl;
+	cout << "sparseResidencyBuffer:                   " << features.sparseResidencyBuffer                   << endl;
+	cout << "sparseResidencyImage2D:                  " << features.sparseResidencyImage2D                  << endl;
+	cout << "sparseResidencyImage3D:                  " << features.sparseResidencyImage3D                  << endl;
+	cout << "tessellationShader:                      " << features.tessellationShader                      << endl;
+	cout << "textureCompressionASTC_LDR:              " << features.textureCompressionASTC_LDR              << endl;
+	cout << "textureCompressionBC:                    " << features.textureCompressionBC                    << endl;
+	cout << "textureCompressionETC2:                  " << features.textureCompressionETC2                  << endl;
+	cout << "variableMultisampleRate:                 " << features.variableMultisampleRate                 << endl;
+	cout << "vertexPipelineStoresAndAtomics:          " << features.vertexPipelineStoresAndAtomics          << endl;
+	cout << "wideLines:                               " << features.wideLines                               << endl;
+}
+
+
+// Method to print out Vulkan physical device features
+// See : https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceProperties.html
+// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceSparseProperties.html
+// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceLimits.html
+void printPhysicalDeviceProperties(const VkPhysicalDeviceProperties& properties)
+{
+	// Create a human-readable device-type string from the device-type enum
+	const VkPhysicalDeviceType deviceType = properties.deviceType;
+	std::string deviceTypeString;
+	switch (deviceType)
+	{
+	case 0:
+		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_OTHER";
+		break;
+	case 1:
+		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU";
+		break;
+	case 2:
+		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU";
+		break;
+	case 3:
+		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU";
+		break;
+	case 4:
+		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_CPU";
+		break;
+	default:
+		deviceTypeString = "Unknown VkPhysicalDeviceType enum: " + deviceType;
+	}
+
+	cout << "----- Physical Device Properties -----" << endl;
+	cout << "apiVersion:        " << properties.apiVersion        << endl;
+	cout << "driverVersion:     " << properties.driverVersion     << endl;
+	cout << "vendorID:          " << properties.vendorID          << endl;
+	cout << "deviceID:          " << properties.deviceID          << endl;
+	cout << "deviceType:        " << deviceTypeString             << endl;
+	cout << "deviceName:        " << properties.deviceName        << endl;
+	cout << "pipelineCacheUUID: Non-print-friendly uint8_t[VK_UUID_SIZE]" << endl;
+
+	const VkPhysicalDeviceSparseProperties sparseProperties = properties.sparseProperties;
+	cout << "--- Sparse Properties ---" << endl;
+	cout << "residencyStandard2DBlockShape:            " << sparseProperties.residencyStandard2DBlockShape << endl;
+	cout << "residencyStandard2DMultisampleBlockShape: " << sparseProperties.residencyStandard2DMultisampleBlockShape << endl;
+	cout << "residencyStandard3DBlockShape             " << sparseProperties.residencyStandard3DBlockShape << endl;
+	cout << "residencyAlignedMipSize                   " << sparseProperties.residencyAlignedMipSize << endl;
+	cout << "residencyNonResidentStrict                " << sparseProperties.residencyNonResidentStrict << endl;
+
+	const VkPhysicalDeviceLimits limits = properties.limits;
+	cout << "--- Limits ---" << endl;
+	cout << "bufferImageGranularity:                          " << limits.bufferImageGranularity                << endl;
+	cout << "discreteQueuePriorities:                         " << limits.discreteQueuePriorities               << endl;
+	cout << "framebufferColorSampleCounts:                    " << limits.framebufferColorSampleCounts          << endl;
+	cout << "framebufferDepthSampleCounts:                    " << limits.framebufferDepthSampleCounts          << endl;
+	cout << "framebufferNoAttachmentsSampleCounts:            " << limits.framebufferNoAttachmentsSampleCounts  << endl;
+	cout << "framebufferStencilSampleCounts:                  " << limits.framebufferStencilSampleCounts        << endl;
+	cout << "lineWidthGranularity:                            " << limits.lineWidthGranularity                  << endl;
+	cout << "lineWidthRange - Min:                            " << limits.lineWidthRange[0] << ", Max: " << limits.lineWidthRange[1] << endl;
+	cout << "maxBoundDescriptorSets:                          " << limits.maxBoundDescriptorSets                << endl;
+	cout << "maxClipDistances:                                " << limits.maxClipDistances                      << endl;
+	cout << "maxColorAttachments:                             " << limits.maxColorAttachments                   << endl;
+	cout << "maxCombinedClipAndCullDistances:                 " << limits.maxCombinedClipAndCullDistances       << endl;
+	cout << "maxComputeSharedMemorySize:                      " << limits.maxComputeSharedMemorySize            << endl;
+	cout << "maxComputeWorkGroupCount                      X: " << limits.maxComputeWorkGroupCount[0] << ", Y: " << limits.maxComputeWorkGroupCount[1] << ", Z: " << limits.maxComputeWorkGroupCount[2] << endl;
+	cout << "maxComputeWorkGroupInvocations:                  " << limits.maxComputeWorkGroupInvocations        << endl;
+	cout << "maxComputeWorkGroupSize                       X: " << limits.maxComputeWorkGroupSize[0]  << ", Y: " << limits.maxComputeWorkGroupSize[1]  << ", Z: " << limits.maxComputeWorkGroupSize[2] << endl;
+	cout << "maxCullDistances:                                " << limits.maxCullDistances                      << endl;
+	cout << "maxDescriptorSetInputAttachments:                " << limits.maxDescriptorSetInputAttachments      << endl;
+	cout << "maxDescriptorSetSampledImages:                   " << limits.maxDescriptorSetSampledImages         << endl;
+	cout << "maxDescriptorSetSamplers:                        " << limits.maxDescriptorSetSamplers              << endl;
+	cout << "maxDescriptorSetStorageBuffers:                  " << limits.maxDescriptorSetStorageBuffers        << endl;
+	cout << "maxDescriptorSetStorageBuffersDynamic:           " << limits.maxDescriptorSetStorageBuffersDynamic << endl;
+	cout << "maxDescriptorSetStorageImages:                   " << limits.maxDescriptorSetStorageImages         << endl;
+	cout << "maxDescriptorSetUniformBuffers:                  " << limits.maxDescriptorSetUniformBuffers        << endl;
+	cout << "maxDescriptorSetUniformBuffersDynamic:           " << limits.maxDescriptorSetUniformBuffersDynamic << endl;
+	cout << "maxDrawIndexedIndexValue:                        " << limits.maxDrawIndexedIndexValue              << endl;
+	cout << "maxDrawIndirectCount:                            " << limits.maxDrawIndirectCount << endl;
+	cout << "maxFragmentCombinedOutputResources:              " << limits.maxFragmentCombinedOutputResources << endl;
+	cout << "maxFragmentDualSrcAttachments:                   " << limits.maxFragmentDualSrcAttachments << endl;
+	cout << "maxFragmentInputComponents:                      " << limits.maxFragmentInputComponents << endl;
+	cout << "maxFragmentOutputAttachments:                    " << limits.maxFragmentOutputAttachments << endl;
+	cout << "maxFramebufferHeight:                            " << limits.maxFramebufferHeight << endl;
+	cout << "maxFramebufferLayers:                            " << limits.maxFramebufferLayers << endl;
+	cout << "maxFramebufferWidth:                             " << limits.maxFramebufferWidth << endl;
+	cout << "maxGeometryInputComponents:                      " << limits.maxGeometryInputComponents << endl;
+	cout << "maxGeometryOutputComponents:                     " << limits.maxGeometryOutputComponents << endl;
+	cout << "maxGeometryOutputVertices:                       " << limits.maxGeometryOutputVertices << endl;
+	cout << "maxGeometryShaderInvocations:                    " << limits.maxGeometryShaderInvocations << endl;
+	cout << "maxGeometryTotalOutputComponents:                " << limits.maxGeometryTotalOutputComponents << endl;
+	cout << "maxImageArrayLayers:                             " << limits.maxImageArrayLayers << endl;
+	cout << "maxImageDimension1D:                             " << limits.maxImageDimension1D << endl;
+	cout << "maxImageDimension2D:                             " << limits.maxImageDimension2D << endl;
+	cout << "maxImageDimension3D:                             " << limits.maxImageDimension3D << endl;
+	cout << "maxImageDimensionCube:                           " << limits.maxImageDimensionCube << endl;
+	cout << "maxInterpolationOffset:                          " << limits.maxInterpolationOffset << endl;
+	cout << "maxMemoryAllocationCount:                        " << limits.maxMemoryAllocationCount << endl;
+	cout << "maxPerStageDescriptorInputAttachments:           " << limits.maxPerStageDescriptorInputAttachments << endl;
+	cout << "maxPerStageDescriptorSampledImages:              " << limits.maxPerStageDescriptorSampledImages << endl;
+	cout << "maxPerStageDescriptorSamplers:                   " << limits.maxPerStageDescriptorSamplers << endl;
+	cout << "maxPerStageDescriptorStorageBuffers:             " << limits.maxPerStageDescriptorStorageBuffers << endl;
+	cout << "maxPerStageDescriptorStorageImages:              " << limits.maxPerStageDescriptorStorageImages << endl;
+	cout << "maxPerStageDescriptorUniformBuffers:             " << limits.maxPerStageDescriptorUniformBuffers << endl;
+	cout << "maxPerStageResources:                            " << limits.maxPerStageResources << endl;
+	cout << "maxPushConstantsSize:                            " << limits.maxPushConstantsSize << endl;
+	cout << "maxSampleMaskWords:                              " << limits.maxSampleMaskWords << endl;
+	cout << "maxSamplerAllocationCount:                       " << limits.maxSamplerAllocationCount << endl;
+	cout << "maxSamplerAnisotropy:                            " << limits.maxSamplerAnisotropy << endl;
+	cout << "maxSamplerLodBias:                               " << limits.maxSamplerLodBias << endl;
+	cout << "maxStorageBufferRange:                           " << limits.maxStorageBufferRange << endl;
+	cout << "maxTessellationControlPerPatchOutputComponents:  " << limits.maxTessellationControlPerPatchOutputComponents << endl;
+	cout << "maxTessellationControlPerVertexInputComponents:  " << limits.maxTessellationControlPerVertexInputComponents << endl;
+	cout << "maxTessellationControlPerVertexOutputComponents: " << limits.maxTessellationControlPerVertexOutputComponents << endl;
+	cout << "maxTessellationControlTotalOutputComponents:     " << limits.maxTessellationControlTotalOutputComponents << endl;
+	cout << "maxTessellationEvaluationInputComponents:        " << limits.maxTessellationEvaluationInputComponents << endl;
+	cout << "maxTessellationEvaluationOutputComponents:       " << limits.maxTessellationEvaluationOutputComponents << endl;
+	cout << "maxTessellationGenerationLevel:                  " << limits.maxTessellationGenerationLevel << endl;
+	cout << "maxTessellationPatchSize:                        " << limits.maxTessellationPatchSize << endl;
+	cout << "maxTexelBufferElements:                          " << limits.maxTexelBufferElements << endl;
+	cout << "maxTexelGatherOffset:                            " << limits.maxTexelGatherOffset << endl;
+	cout << "maxTexelOffset:                                  " << limits.maxTexelOffset << endl;
+	cout << "maxUniformBufferRange:                           " << limits.maxUniformBufferRange << endl;
+	cout << "maxVertexInputAttributeOffset:                   " << limits.maxVertexInputAttributeOffset << endl;
+	cout << "maxVertexInputAttributes:                        " << limits.maxVertexInputAttributes << endl;
+	cout << "maxVertexInputBindings:                          " << limits.maxVertexInputBindings << endl;
+	cout << "maxVertexInputBindingStride:                     " << limits.maxVertexInputBindingStride << endl;
+	cout << "maxVertexOutputComponents:                       " << limits.maxVertexOutputComponents << endl;
+	cout << "maxViewportDimensions                         X: " << limits.maxViewportDimensions[0] << ", Y: " << limits.maxViewportDimensions[1] << endl;
+	cout << "maxViewports:                                    " << limits.maxViewports << endl;
+	cout << "minInterpolationOffset:                          " << limits.minInterpolationOffset << endl;
+	cout << "minMemoryMapAlignment:                           " << limits.minMemoryMapAlignment << endl;
+	cout << "minStorageBufferOffsetAlignment:                 " << limits.minStorageBufferOffsetAlignment << endl;
+	cout << "minTexelBufferOffsetAlignment:                   " << limits.minTexelBufferOffsetAlignment << endl;
+	cout << "minTexelGatherOffset:                            " << limits.minTexelGatherOffset << endl;
+	cout << "minTexelOffset:                                  " << limits.minTexelOffset << endl;
+	cout << "minUniformBufferOffsetAlignment:                 " << limits.minUniformBufferOffsetAlignment << endl;
+	cout << "mipmapPrecisionBits:                             " << limits.mipmapPrecisionBits << endl;
+	cout << "nonCoherentAtomSize:                             " << limits.nonCoherentAtomSize << endl;
+	cout << "optimalBufferCopyOffsetAlignment:                " << limits.optimalBufferCopyOffsetAlignment << endl;
+	cout << "optimalBufferCopyRowPitchAlignment:              " << limits.optimalBufferCopyRowPitchAlignment << endl;
+	cout << "pointSizeGranularity:                            " << limits.pointSizeGranularity << endl;
+	cout << "pointSizeRange                              Min: " << limits.pointSizeRange[0] << ", Max: " << limits.pointSizeRange[1] << endl;
+	cout << "sampledImageColorSampleCounts:                   " << limits.sampledImageColorSampleCounts << endl;
+	cout << "sampledImageDepthSampleCounts:                   " << limits.sampledImageDepthSampleCounts << endl;
+	cout << "sampledImageIntegerSampleCounts:                 " << limits.sampledImageIntegerSampleCounts << endl;
+	cout << "sampledImageStencilSampleCounts:                 " << limits.sampledImageStencilSampleCounts << endl;
+	cout << "sparseAddressSpaceSize:                          " << limits.sparseAddressSpaceSize << endl;
+	cout << "standardSampleLocations:                         " << limits.standardSampleLocations << endl;
+	cout << "storageImageSampleCounts:                        " << limits.storageImageSampleCounts << endl;
+	cout << "strictLines:                                     " << limits.strictLines << endl;
+	cout << "subPixelInterpolationOffsetBits:                 " << limits.subPixelInterpolationOffsetBits << endl;
+	cout << "subPixelPrecisionBits:                           " << limits.subPixelPrecisionBits << endl;
+	cout << "subTexelPrecisionBits:                           " << limits.subTexelPrecisionBits << endl;
+	cout << "timestampComputeAndGraphics:                     " << limits.timestampComputeAndGraphics << endl;
+	cout << "timestampPeriod:                                 " << limits.timestampPeriod << endl;
+	cout << "viewportBoundsRange                         Min: " << limits.viewportBoundsRange[0] << ", Max: " << limits.viewportBoundsRange[1] << endl;
+	cout << "viewportSubPixelBits:                            " << limits.viewportSubPixelBits << endl;
+}
 
 int main()
 {
@@ -172,6 +391,7 @@ int main()
 		return -2;
 	}
 	if (VERBOSE) { cout << "[OK] Successfully loaded Vulkan global functions." << endl; }
+
 
 	// Get a count of all the Vulkan instance extensions available
 	uint32_t instanceExtensionsCount = 0;
@@ -208,6 +428,7 @@ int main()
 		}
 	}
 
+
 	// Make all the extensions available for use
 	// Note: If we only wanted to make SOME extensions available then we would add them to the desiredExtensions vector directly then check that they ARE available
 	std::vector<char const*> desiredExtensions(instanceExtensionsCount);
@@ -224,6 +445,7 @@ int main()
 		}
 	}
 	if (VERBOSE) { cout << "[OK] All desired extensions are available." << endl; }
+
 
 	// Construct the application info required to initialise Vulkan
 	VkApplicationInfo applicationInfo = {
@@ -249,6 +471,7 @@ int main()
 		!desiredExtensions.empty() ? desiredExtensions.data() : nullptr
 	};
 
+
 	// Actually create the Vulkan instance! Note: The vulkan instance itself is an `opaque handle` - we can't get any details from it directly.
 	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 	VkInstance vulkanInstance;
@@ -260,6 +483,7 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance created." << endl; }
 
+
 	// Load our instance-level functions
 	const bool instanceLevelFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctions(vulkanInstance);
 	if (!instanceLevelFunctionsLoaded)
@@ -269,6 +493,7 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded." << endl; }
 
+
 	// Now load the instance-level functions that are provided by our extensions
 	const bool instanceLevelExtensionFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctionFromExtension(vulkanInstance, desiredExtensions);
 	if (!instanceLevelExtensionFunctionsLoaded)
@@ -277,7 +502,8 @@ int main()
 		return -8;
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded from extensions." << endl; }
-	
+
+
 	// Enumerate available physical devices (from which we will access LOGICAL devices that will perform our work!)
 	// Note: Like our VkInstance, VkPhysicalDevice is an opaque handle.
 	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDevice.html
@@ -292,13 +518,7 @@ int main()
 		cout << "[FAIL] Could not enumerate physical devices. Physical devices found: " << physicalDeviceCount << endl;
 		return -9;
 	}
-	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceCount << " physical device(s)." << endl; }
-
-	// I'm not going to build the kitchen sink into this basecode when I've yet to draw one red triangle! K.I.S.S.!
-	if (physicalDeviceCount > 1)
-	{
-		cout << "[WARNING] Found multiple physical devices - we're only going to work with the first one found (0) for now to keep the code manageable." << endl;
-	}
+	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceCount << " physical device(s)." << endl; }	
 
 	std::vector<VkPhysicalDevice> availablePhysicalDevices(physicalDeviceCount);
 	result = VK_SUCCESS;
@@ -310,7 +530,16 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Populated details of " << physicalDeviceCount << " physical device(s)." << endl; }
 
-	// Enumerate properties of available physical devices.
+
+	// For now we'll only work with the first physical device found so let's keep an easy reference to it
+	if (physicalDeviceCount > 1)
+	{
+		cout << "[WARNING] Found multiple physical devices - using physical device 0 for now to keep the code manageable." << endl;
+	}
+	auto activePhysicalDevice = availablePhysicalDevices[0];
+
+
+	// Enumerate extension properties on available physical devices.
 	// Note: Again we do this as a two-step - first we find the number of extensions for a physical device, then we populate details (p40)
 	uint32_t physicalDeviceExtensionCount = 0;
 	result = VK_SUCCESS;
@@ -331,10 +560,14 @@ int main()
 		return -12;
 	}
 	if (VERBOSE) { cout << "[OK] Populated " << physicalDeviceExtensionCount << " extension properties for physical device 0." << endl; }
-	
 
-	// Check available physical device extensions (so we can be sure to choose create a logical device on a physical device which
-	// supports our desired extensions).
 
+	// Get features and properties of physical devices
+	VkPhysicalDeviceFeatures activePhysicalDeviceFeatures;
+	VkPhysicalDeviceProperties activePhysicalDeviceProperties;
+	VulkanFunctionLoaders::vkGetPhysicalDeviceFeatures(activePhysicalDevice, &activePhysicalDeviceFeatures);
+	VulkanFunctionLoaders::vkGetPhysicalDeviceProperties(activePhysicalDevice, &activePhysicalDeviceProperties);
+	printPhysicalDeviceFeatures(activePhysicalDeviceFeatures);
+	printPhysicalDeviceProperties(activePhysicalDeviceProperties);
 
 }
