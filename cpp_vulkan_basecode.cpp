@@ -2,6 +2,7 @@
 //
 
 #include <iostream>
+#include <cstdint>
 
 using std::cout, std::endl, std::string;
 
@@ -240,7 +241,7 @@ void printPhysicalDeviceProperties(const VkPhysicalDeviceProperties& properties)
 	cout << "deviceID:          " << properties.deviceID          << endl;
 	cout << "deviceType:        " << deviceTypeString             << endl;
 	cout << "deviceName:        " << properties.deviceName        << endl;
-	cout << "pipelineCacheUUID: Non-print-friendly uint8_t[VK_UUID_SIZE]" << endl;
+	cout << "pipelineCacheUUID: Non-print-friendly uint8_t[VK_UUID_SIZE] - use directly" << endl;
 
 	const VkPhysicalDeviceSparseProperties sparseProperties = properties.sparseProperties;
 	cout << "--- Sparse Properties ---" << endl;
@@ -358,6 +359,27 @@ void printPhysicalDeviceProperties(const VkPhysicalDeviceProperties& properties)
 	cout << "timestampPeriod:                                 " << limits.timestampPeriod << endl;
 	cout << "viewportBoundsRange                         Min: " << limits.viewportBoundsRange[0] << ", Max: " << limits.viewportBoundsRange[1] << endl;
 	cout << "viewportSubPixelBits:                            " << limits.viewportSubPixelBits << endl;
+}
+
+// Method to return a human-readable string of what Vulkan queue flags are set
+// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
+string getFriendlyQueueFlags(VkQueueFlags flagMask)
+{
+	string msg;
+	if ((flagMask & VK_QUEUE_GRAPHICS_BIT)         != 0) { msg += "VK_QUEUE_GRAPHICS_BIT ";         }
+	if ((flagMask & VK_QUEUE_COMPUTE_BIT)          != 0) { msg += "VK_QUEUE_COMPUTE_BIT ";          }
+	if ((flagMask & VK_QUEUE_TRANSFER_BIT)         != 0) { msg += "VK_QUEUE_TRANSFER_BIT ";         }
+	if ((flagMask & VK_QUEUE_SPARSE_BINDING_BIT)   != 0) { msg += "VK_QUEUE_SPARSE_BINDING_BIT ";   }
+	if ((flagMask & VK_QUEUE_PROTECTED_BIT)        != 0) { msg += "VK_QUEUE_PROTECTED_BIT ";        } // Provided by VK_VERSION_1_1
+	if ((flagMask & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0) { msg += "VK_QUEUE_VIDEO_DECODE_BIT_KHR "; } // Provided by VK_KHR_video_decode_queue
+
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+	if ((flagMask & 0x00000040) != 0) { msg += "VK_QUEUE_VIDEO_ENCODE_BIT_KHR "; } // Provided by VK_KHR_video_encode_queue
+#endif
+
+	if ((flagMask & VK_QUEUE_OPTICAL_FLOW_BIT_NV) != 0) { msg += "VK_QUEUE_OPTICAL_FLOW_BIT_NV ";  } // Provided by VK_NV_optical_flow
+
+	return msg;
 }
 
 int main()
@@ -569,5 +591,65 @@ int main()
 	VulkanFunctionLoaders::vkGetPhysicalDeviceProperties(activePhysicalDevice, &activePhysicalDeviceProperties);
 	printPhysicalDeviceFeatures(activePhysicalDeviceFeatures);
 	printPhysicalDeviceProperties(activePhysicalDeviceProperties);
+
+
+	// Get details of queue families - in familiar style, we'll do this as a two-step where we first get the number of families and then
+	// populate details of each queue family we found.
+	uint32_t queueFamiliesCount = 0;
+	VulkanFunctionLoaders::vkGetPhysicalDeviceQueueFamilyProperties(activePhysicalDevice, &queueFamiliesCount, nullptr);
+	if (queueFamiliesCount == 0)
+	{
+		std::cout << "Could not get the number of queue families." << std::endl;
+		return -13;
+	}
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamiliesCount);
+	VulkanFunctionLoaders::vkGetPhysicalDeviceQueueFamilyProperties(activePhysicalDevice, &queueFamiliesCount,queueFamilies.data());
+	if (queueFamiliesCount == 0)
+	{
+		cout << "Could not acquire properties of queue families." << endl;
+		return -14;
+	}
+	if (VERBOSE)
+	{
+		cout << "Num. queue families found: " << queueFamiliesCount << endl;
+		
+		for (int i = 0; i < queueFamiliesCount; ++i)
+		{
+			auto granularity = queueFamilies[i].minImageTransferGranularity;
+
+			cout << "Queue family number: " << i << endl;
+			cout << "\tminImageTransferGranularity - Width: " << granularity.width << ", Height: " << granularity.height << ", Depth: " << granularity.depth << endl;
+			cout << "\ttimestampValidBits:                  " << queueFamilies[i].timestampValidBits << endl;
+			cout << "\tqueueCount:                          " << queueFamilies[i].queueCount << endl;
+			cout << "\tqueueFlags:                          " << getFriendlyQueueFlags(queueFamilies[i].queueFlags) << endl;
+		}
+	}
+
+
+	// Now that we have details of the available queue families, we need to choose one that has our desired capabilities - which in this
+	// case will simply be that we want to draw something.
+	bool foundSuitableQueueFamily = false;
+	VkQueueFamilyProperties activeQueueFamily;
+	uint32_t activeQueueFamilyIndex = 0xffffffff; // Set to max possible value initially to avoid "may be uninitialised" moaning
+	VkQueueFlags desiredCapabilities = VK_QUEUE_GRAPHICS_BIT;
+	string desiredCapabilitiesString = getFriendlyQueueFlags(desiredCapabilities);
+	for (int i = 0; i < queueFamiliesCount; ++i)
+	{		
+		if ((queueFamilies[i].queueFlags & desiredCapabilities) != 0)
+		{
+			activeQueueFamily        = queueFamilies[i];
+			activeQueueFamilyIndex   = i;
+			foundSuitableQueueFamily = true;
+			break;
+		}
+	}
+	if (!foundSuitableQueueFamily)
+	{
+		cout << "Could not find a suitable queue family with desired capabilities: " << desiredCapabilitiesString << endl;
+		return -15;
+	}
+	cout << "Found queue family with desired capabilities: " << desiredCapabilitiesString << endl;
+	cout << "Using queue family at index : " << activeQueueFamilyIndex << endl;
+
 
 }
