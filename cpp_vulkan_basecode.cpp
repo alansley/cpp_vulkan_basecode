@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <vector>
 
+// Our `VulkanHelpers` are just some static utility functions to do things like print out details or human-friendly strings of things
+#include "VulkanHelpers.hpp"
+
 using std::cout, std::endl, std::string;
 
 // Vulkan requires an application name and engine name when creating an instance. This is so that AAA games
@@ -23,7 +26,6 @@ const string EngineName = "ACL_vulkan_engine";
 #define VK_NO_PROTOTYPES   // In this example we'll load the functions that we need only, rather than pull in all the prototypes from vulkan.h
 #include "vulkan/vulkan.h" // Note: "vulkan.h" includes "vk_platform.h" amongst other things
 
-
 // Custom struct for queue details
 struct QueueInfo
 {
@@ -31,8 +33,8 @@ struct QueueInfo
 	std::vector<float> Priorities;
 };
 
-constexpr bool VERBOSE      = true; // Prints out verbose details of what we're doing if true
-constexpr bool VERY_VERBOSE = true; // Prints out additional details of what we're doing if true (e.g., prints all physical device properties, extensions etc.)
+constexpr bool VERBOSE      = true;  // Prints out verbose details of what we're doing if true
+constexpr bool VERY_VERBOSE = false; // Prints out additional details of what we're doing if true (e.g., prints all physical device properties, extensions etc.)
 
 // ----- Platform-specific Defines ------
 
@@ -51,7 +53,6 @@ constexpr bool VERY_VERBOSE = true; // Prints out additional details of what we'
 #endif
 
 
-
 // Method to connect to the Vulkan loader library
 bool ConnectWithVulkanLoaderLibrary(LIBRARY_TYPE& vulkan_library)
 {
@@ -66,11 +67,11 @@ bool ConnectWithVulkanLoaderLibrary(LIBRARY_TYPE& vulkan_library)
 	return vulkan_library != nullptr; // Returns false if the vulkan_library is null, true (i.e., success) otherwise
 }
 
+// TODO: If we look at the Vulkan SDK `Templates` folder they use Vulkan.hpp rather than this, and I believe that will allow us to load functions without all the templating craziness. Check it out.
 #include "VulkanFunctions.h"
 
-
-
-// Note: I fixed this via the commend from `bodyaka` at: https://stackoverflow.com/questions/63587107/undeclared-identifier-when-defining-macro-to-load-vulkan-function-pointers
+// TODO: I fixed this templating stuff via the commend from `bodyaka` at:
+// https://stackoverflow.com/questions/63587107/undeclared-identifier-when-defining-macro-to-load-vulkan-function-pointers
 // Be sure to thank him & maybe link to this repo at some point.
 namespace VulkanFunctionLoaders
 {
@@ -135,7 +136,7 @@ for (auto &enabledExtension : enabledExtensions) {                        \
 if (std::string(enabledExtension) == std::string(extension)) {            \
 name = (PFN_##name)vkGetInstanceProcAddr(vulkanInstance, #name);          \
 if (name == nullptr) {                                                    \
-std::cout << "Could not load instance-level Vulkan function named: "      \
+std::cout << "Could not load instance-level Vulkan function from EXTENSION named: "      \
 #name << std::endl;                                                       \
 return false;                                                             \
 }                                                                         \
@@ -147,330 +148,26 @@ return false;                                                             \
 
 } // End of namespace VulkanFunctionLoaders
 
-// Method to print out Vulkan physical device features
-// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceFeatures.html
-void printPhysicalDeviceFeatures(const VkPhysicalDeviceFeatures &features)
-{
-	cout << "----- Physical Device Features (1 = available, 0 = unavailable) -----"                         << endl;
-	cout << "alphaToOne:                              " << features.alphaToOne                              << endl;
-	cout << "depthBiasClamp:                          " << features.depthBiasClamp                          << endl;
-	cout << "depthBounds:                             " << features.depthBounds                             << endl;
-	cout << "depthClamp:                              " << features.depthClamp                              << endl;
-	cout << "drawIndirectFirstInstance:               " << features.drawIndirectFirstInstance               << endl;
-	cout << "dualSrcBlend:                            " << features.dualSrcBlend                            << endl;
-	cout << "fillModeNonSolid:                        " << features.fillModeNonSolid                        << endl;
-	cout << "fragmentStoresAndAtomics:                " << features.fragmentStoresAndAtomics                << endl;
-	cout << "fullDrawIndexUint32:                     " << features.fullDrawIndexUint32                     << endl;
-	cout << "geometryShader:                          " << features.geometryShader                          << endl;
-	cout << "imageCubeArray:                          " << features.imageCubeArray                          << endl;
-	cout << "independentBlend:                        " << features.independentBlend                        << endl;
-	cout << "inheritedQueries:                        " << features.inheritedQueries                        << endl;
-	cout << "largePoints:                             " << features.largePoints                             << endl;
-	cout << "logicOp:                                 " << features.logicOp                                 << endl;
-	cout << "multiDrawIndirect:                       " << features.multiDrawIndirect                       << endl;
-	cout << "multiViewport:                           " << features.multiViewport                           << endl;
-	cout << "occlusionQueryPrecise:                   " << features.occlusionQueryPrecise                   << endl;
-	cout << "pipelineStatisticsQuery:                 " << features.pipelineStatisticsQuery                 << endl;
-	cout << "robustBufferAccess:                      " << features.robustBufferAccess                      << endl;
-	cout << "samplerAnisotropy:                       " << features.samplerAnisotropy                       << endl;
-	cout << "sampleRateShading:                       " << features.sampleRateShading                       << endl;	
-	cout << "shaderClipDistance:                      " << features.shaderClipDistance                      << endl;
-	cout << "shaderCullDistance:                      " << features.shaderCullDistance                      << endl;
-	cout << "shaderFloat64:                           " << features.shaderFloat64                           << endl;
-	cout << "shaderImageGatherExtended:               " << features.shaderImageGatherExtended               << endl;
-	cout << "shaderInt16:                             " << features.shaderInt16                             << endl;
-	cout << "shaderInt64:                             " << features.shaderInt64                             << endl;
-	cout << "shaderResourceMinLod:                    " << features.shaderResourceMinLod                    << endl;
-	cout << "shaderResourceResidency:                 " << features.shaderResourceResidency                 << endl;
-	cout << "shaderSampledImageArrayDynamicIndexing:  " << features.shaderSampledImageArrayDynamicIndexing  << endl;
-	cout << "shaderStorageBufferArrayDynamicIndexing: " << features.shaderStorageBufferArrayDynamicIndexing << endl;
-	cout << "shaderStorageImageExtendedFormats:       " << features.shaderStorageImageExtendedFormats       << endl;
-	cout << "shaderStorageImageMultisample:           " << features.shaderStorageImageMultisample           << endl;
-	cout << "shaderStorageImageReadWithoutFormat:     " << features.shaderStorageImageReadWithoutFormat     << endl;
-	cout << "shaderStorageImageWriteWithoutFormat:    " << features.shaderStorageImageWriteWithoutFormat    << endl;	
-	cout << "shaderTessellationAndGeometryPointSize:  " << features.shaderTessellationAndGeometryPointSize  << endl;
-	cout << "shaderUniformBufferArrayDynamicIndexing: " << features.shaderUniformBufferArrayDynamicIndexing << endl;
-	cout << "sparseBinding:                           " << features.sparseBinding                           << endl;
-	cout << "sparseResidency16Samples:                " << features.sparseResidency16Samples                << endl;
-	cout << "sparseResidency2Samples:                 " << features.sparseResidency2Samples                 << endl;
-	cout << "sparseResidency4Samples:                 " << features.sparseResidency4Samples                 << endl;
-	cout << "sparseResidency8Samples:                 " << features.sparseResidency8Samples                 << endl;
-	cout << "sparseResidencyAliased:                  " << features.sparseResidencyAliased                  << endl;
-	cout << "sparseResidencyBuffer:                   " << features.sparseResidencyBuffer                   << endl;
-	cout << "sparseResidencyImage2D:                  " << features.sparseResidencyImage2D                  << endl;
-	cout << "sparseResidencyImage3D:                  " << features.sparseResidencyImage3D                  << endl;
-	cout << "tessellationShader:                      " << features.tessellationShader                      << endl;
-	cout << "textureCompressionASTC_LDR:              " << features.textureCompressionASTC_LDR              << endl;
-	cout << "textureCompressionBC:                    " << features.textureCompressionBC                    << endl;
-	cout << "textureCompressionETC2:                  " << features.textureCompressionETC2                  << endl;
-	cout << "variableMultisampleRate:                 " << features.variableMultisampleRate                 << endl;
-	cout << "vertexPipelineStoresAndAtomics:          " << features.vertexPipelineStoresAndAtomics          << endl;
-	cout << "wideLines:                               " << features.wideLines                               << endl;
-}
-
-
-// Method to print out Vulkan physical device features
-// See : https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceProperties.html
-// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
-// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceSparseProperties.html
-// Also: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceLimits.html
-void printPhysicalDeviceProperties(const VkPhysicalDeviceProperties& properties)
-{
-	// Create a human-readable device-type string from the device-type enum
-	const VkPhysicalDeviceType deviceType = properties.deviceType;
-	std::string deviceTypeString;
-	switch (deviceType)
-	{
-	case 0:
-		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_OTHER";
-		break;
-	case 1:
-		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU";
-		break;
-	case 2:
-		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU";
-		break;
-	case 3:
-		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU";
-		break;
-	case 4:
-		deviceTypeString = "VK_PHYSICAL_DEVICE_TYPE_CPU";
-		break;
-	default:
-		deviceTypeString = "Unknown VkPhysicalDeviceType enum: " + deviceType;
-	}
-
-	cout << "----- Physical Device Properties -----" << endl;
-	cout << "apiVersion:        " << properties.apiVersion        << endl;
-	cout << "driverVersion:     " << properties.driverVersion     << endl;
-	cout << "vendorID:          " << properties.vendorID          << endl;
-	cout << "deviceID:          " << properties.deviceID          << endl;
-	cout << "deviceType:        " << deviceTypeString             << endl;
-	cout << "deviceName:        " << properties.deviceName        << endl;
-	cout << "pipelineCacheUUID: Non-print-friendly uint8_t[VK_UUID_SIZE] - use directly" << endl;
-
-	const VkPhysicalDeviceSparseProperties sparseProperties = properties.sparseProperties;
-	cout << "--- Sparse Properties ---" << endl;
-	cout << "residencyStandard2DBlockShape:            " << sparseProperties.residencyStandard2DBlockShape << endl;
-	cout << "residencyStandard2DMultisampleBlockShape: " << sparseProperties.residencyStandard2DMultisampleBlockShape << endl;
-	cout << "residencyStandard3DBlockShape             " << sparseProperties.residencyStandard3DBlockShape << endl;
-	cout << "residencyAlignedMipSize                   " << sparseProperties.residencyAlignedMipSize << endl;
-	cout << "residencyNonResidentStrict                " << sparseProperties.residencyNonResidentStrict << endl;
-
-	const VkPhysicalDeviceLimits limits = properties.limits;
-	cout << "--- Limits ---" << endl;
-	cout << "bufferImageGranularity:                          " << limits.bufferImageGranularity                << endl;
-	cout << "discreteQueuePriorities:                         " << limits.discreteQueuePriorities               << endl;
-	cout << "framebufferColorSampleCounts:                    " << limits.framebufferColorSampleCounts          << endl;
-	cout << "framebufferDepthSampleCounts:                    " << limits.framebufferDepthSampleCounts          << endl;
-	cout << "framebufferNoAttachmentsSampleCounts:            " << limits.framebufferNoAttachmentsSampleCounts  << endl;
-	cout << "framebufferStencilSampleCounts:                  " << limits.framebufferStencilSampleCounts        << endl;
-	cout << "lineWidthGranularity:                            " << limits.lineWidthGranularity                  << endl;
-	cout << "lineWidthRange - Min:                            " << limits.lineWidthRange[0] << ", Max: " << limits.lineWidthRange[1] << endl;
-	cout << "maxBoundDescriptorSets:                          " << limits.maxBoundDescriptorSets                << endl;
-	cout << "maxClipDistances:                                " << limits.maxClipDistances                      << endl;
-	cout << "maxColorAttachments:                             " << limits.maxColorAttachments                   << endl;
-	cout << "maxCombinedClipAndCullDistances:                 " << limits.maxCombinedClipAndCullDistances       << endl;
-	cout << "maxComputeSharedMemorySize:                      " << limits.maxComputeSharedMemorySize            << endl;
-	cout << "maxComputeWorkGroupCount                      X: " << limits.maxComputeWorkGroupCount[0] << ", Y: " << limits.maxComputeWorkGroupCount[1] << ", Z: " << limits.maxComputeWorkGroupCount[2] << endl;
-	cout << "maxComputeWorkGroupInvocations:                  " << limits.maxComputeWorkGroupInvocations        << endl;
-	cout << "maxComputeWorkGroupSize                       X: " << limits.maxComputeWorkGroupSize[0]  << ", Y: " << limits.maxComputeWorkGroupSize[1]  << ", Z: " << limits.maxComputeWorkGroupSize[2] << endl;
-	cout << "maxCullDistances:                                " << limits.maxCullDistances                      << endl;
-	cout << "maxDescriptorSetInputAttachments:                " << limits.maxDescriptorSetInputAttachments      << endl;
-	cout << "maxDescriptorSetSampledImages:                   " << limits.maxDescriptorSetSampledImages         << endl;
-	cout << "maxDescriptorSetSamplers:                        " << limits.maxDescriptorSetSamplers              << endl;
-	cout << "maxDescriptorSetStorageBuffers:                  " << limits.maxDescriptorSetStorageBuffers        << endl;
-	cout << "maxDescriptorSetStorageBuffersDynamic:           " << limits.maxDescriptorSetStorageBuffersDynamic << endl;
-	cout << "maxDescriptorSetStorageImages:                   " << limits.maxDescriptorSetStorageImages         << endl;
-	cout << "maxDescriptorSetUniformBuffers:                  " << limits.maxDescriptorSetUniformBuffers        << endl;
-	cout << "maxDescriptorSetUniformBuffersDynamic:           " << limits.maxDescriptorSetUniformBuffersDynamic << endl;
-	cout << "maxDrawIndexedIndexValue:                        " << limits.maxDrawIndexedIndexValue              << endl;
-	cout << "maxDrawIndirectCount:                            " << limits.maxDrawIndirectCount << endl;
-	cout << "maxFragmentCombinedOutputResources:              " << limits.maxFragmentCombinedOutputResources << endl;
-	cout << "maxFragmentDualSrcAttachments:                   " << limits.maxFragmentDualSrcAttachments << endl;
-	cout << "maxFragmentInputComponents:                      " << limits.maxFragmentInputComponents << endl;
-	cout << "maxFragmentOutputAttachments:                    " << limits.maxFragmentOutputAttachments << endl;
-	cout << "maxFramebufferHeight:                            " << limits.maxFramebufferHeight << endl;
-	cout << "maxFramebufferLayers:                            " << limits.maxFramebufferLayers << endl;
-	cout << "maxFramebufferWidth:                             " << limits.maxFramebufferWidth << endl;
-	cout << "maxGeometryInputComponents:                      " << limits.maxGeometryInputComponents << endl;
-	cout << "maxGeometryOutputComponents:                     " << limits.maxGeometryOutputComponents << endl;
-	cout << "maxGeometryOutputVertices:                       " << limits.maxGeometryOutputVertices << endl;
-	cout << "maxGeometryShaderInvocations:                    " << limits.maxGeometryShaderInvocations << endl;
-	cout << "maxGeometryTotalOutputComponents:                " << limits.maxGeometryTotalOutputComponents << endl;
-	cout << "maxImageArrayLayers:                             " << limits.maxImageArrayLayers << endl;
-	cout << "maxImageDimension1D:                             " << limits.maxImageDimension1D << endl;
-	cout << "maxImageDimension2D:                             " << limits.maxImageDimension2D << endl;
-	cout << "maxImageDimension3D:                             " << limits.maxImageDimension3D << endl;
-	cout << "maxImageDimensionCube:                           " << limits.maxImageDimensionCube << endl;
-	cout << "maxInterpolationOffset:                          " << limits.maxInterpolationOffset << endl;
-	cout << "maxMemoryAllocationCount:                        " << limits.maxMemoryAllocationCount << endl;
-	cout << "maxPerStageDescriptorInputAttachments:           " << limits.maxPerStageDescriptorInputAttachments << endl;
-	cout << "maxPerStageDescriptorSampledImages:              " << limits.maxPerStageDescriptorSampledImages << endl;
-	cout << "maxPerStageDescriptorSamplers:                   " << limits.maxPerStageDescriptorSamplers << endl;
-	cout << "maxPerStageDescriptorStorageBuffers:             " << limits.maxPerStageDescriptorStorageBuffers << endl;
-	cout << "maxPerStageDescriptorStorageImages:              " << limits.maxPerStageDescriptorStorageImages << endl;
-	cout << "maxPerStageDescriptorUniformBuffers:             " << limits.maxPerStageDescriptorUniformBuffers << endl;
-	cout << "maxPerStageResources:                            " << limits.maxPerStageResources << endl;
-	cout << "maxPushConstantsSize:                            " << limits.maxPushConstantsSize << endl;
-	cout << "maxSampleMaskWords:                              " << limits.maxSampleMaskWords << endl;
-	cout << "maxSamplerAllocationCount:                       " << limits.maxSamplerAllocationCount << endl;
-	cout << "maxSamplerAnisotropy:                            " << limits.maxSamplerAnisotropy << endl;
-	cout << "maxSamplerLodBias:                               " << limits.maxSamplerLodBias << endl;
-	cout << "maxStorageBufferRange:                           " << limits.maxStorageBufferRange << endl;
-	cout << "maxTessellationControlPerPatchOutputComponents:  " << limits.maxTessellationControlPerPatchOutputComponents << endl;
-	cout << "maxTessellationControlPerVertexInputComponents:  " << limits.maxTessellationControlPerVertexInputComponents << endl;
-	cout << "maxTessellationControlPerVertexOutputComponents: " << limits.maxTessellationControlPerVertexOutputComponents << endl;
-	cout << "maxTessellationControlTotalOutputComponents:     " << limits.maxTessellationControlTotalOutputComponents << endl;
-	cout << "maxTessellationEvaluationInputComponents:        " << limits.maxTessellationEvaluationInputComponents << endl;
-	cout << "maxTessellationEvaluationOutputComponents:       " << limits.maxTessellationEvaluationOutputComponents << endl;
-	cout << "maxTessellationGenerationLevel:                  " << limits.maxTessellationGenerationLevel << endl;
-	cout << "maxTessellationPatchSize:                        " << limits.maxTessellationPatchSize << endl;
-	cout << "maxTexelBufferElements:                          " << limits.maxTexelBufferElements << endl;
-	cout << "maxTexelGatherOffset:                            " << limits.maxTexelGatherOffset << endl;
-	cout << "maxTexelOffset:                                  " << limits.maxTexelOffset << endl;
-	cout << "maxUniformBufferRange:                           " << limits.maxUniformBufferRange << endl;
-	cout << "maxVertexInputAttributeOffset:                   " << limits.maxVertexInputAttributeOffset << endl;
-	cout << "maxVertexInputAttributes:                        " << limits.maxVertexInputAttributes << endl;
-	cout << "maxVertexInputBindings:                          " << limits.maxVertexInputBindings << endl;
-	cout << "maxVertexInputBindingStride:                     " << limits.maxVertexInputBindingStride << endl;
-	cout << "maxVertexOutputComponents:                       " << limits.maxVertexOutputComponents << endl;
-	cout << "maxViewportDimensions                         X: " << limits.maxViewportDimensions[0] << ", Y: " << limits.maxViewportDimensions[1] << endl;
-	cout << "maxViewports:                                    " << limits.maxViewports << endl;
-	cout << "minInterpolationOffset:                          " << limits.minInterpolationOffset << endl;
-	cout << "minMemoryMapAlignment:                           " << limits.minMemoryMapAlignment << endl;
-	cout << "minStorageBufferOffsetAlignment:                 " << limits.minStorageBufferOffsetAlignment << endl;
-	cout << "minTexelBufferOffsetAlignment:                   " << limits.minTexelBufferOffsetAlignment << endl;
-	cout << "minTexelGatherOffset:                            " << limits.minTexelGatherOffset << endl;
-	cout << "minTexelOffset:                                  " << limits.minTexelOffset << endl;
-	cout << "minUniformBufferOffsetAlignment:                 " << limits.minUniformBufferOffsetAlignment << endl;
-	cout << "mipmapPrecisionBits:                             " << limits.mipmapPrecisionBits << endl;
-	cout << "nonCoherentAtomSize:                             " << limits.nonCoherentAtomSize << endl;
-	cout << "optimalBufferCopyOffsetAlignment:                " << limits.optimalBufferCopyOffsetAlignment << endl;
-	cout << "optimalBufferCopyRowPitchAlignment:              " << limits.optimalBufferCopyRowPitchAlignment << endl;
-	cout << "pointSizeGranularity:                            " << limits.pointSizeGranularity << endl;
-	cout << "pointSizeRange                              Min: " << limits.pointSizeRange[0] << ", Max: " << limits.pointSizeRange[1] << endl;
-	cout << "sampledImageColorSampleCounts:                   " << limits.sampledImageColorSampleCounts << endl;
-	cout << "sampledImageDepthSampleCounts:                   " << limits.sampledImageDepthSampleCounts << endl;
-	cout << "sampledImageIntegerSampleCounts:                 " << limits.sampledImageIntegerSampleCounts << endl;
-	cout << "sampledImageStencilSampleCounts:                 " << limits.sampledImageStencilSampleCounts << endl;
-	cout << "sparseAddressSpaceSize:                          " << limits.sparseAddressSpaceSize << endl;
-	cout << "standardSampleLocations:                         " << limits.standardSampleLocations << endl;
-	cout << "storageImageSampleCounts:                        " << limits.storageImageSampleCounts << endl;
-	cout << "strictLines:                                     " << limits.strictLines << endl;
-	cout << "subPixelInterpolationOffsetBits:                 " << limits.subPixelInterpolationOffsetBits << endl;
-	cout << "subPixelPrecisionBits:                           " << limits.subPixelPrecisionBits << endl;
-	cout << "subTexelPrecisionBits:                           " << limits.subTexelPrecisionBits << endl;
-	cout << "timestampComputeAndGraphics:                     " << limits.timestampComputeAndGraphics << endl;
-	cout << "timestampPeriod:                                 " << limits.timestampPeriod << endl;
-	cout << "viewportBoundsRange                         Min: " << limits.viewportBoundsRange[0] << ", Max: " << limits.viewportBoundsRange[1] << endl;
-	cout << "viewportSubPixelBits:                            " << limits.viewportSubPixelBits << endl;
-}
-
-// Method to return a human-readable string of what Vulkan queue flags are set
-// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html
-string getFriendlyQueueFlags(VkQueueFlags flagMask)
-{
-	string msg;
-	if ((flagMask & VK_QUEUE_GRAPHICS_BIT)         != 0) { msg += "VK_QUEUE_GRAPHICS_BIT ";         }
-	if ((flagMask & VK_QUEUE_COMPUTE_BIT)          != 0) { msg += "VK_QUEUE_COMPUTE_BIT ";          }
-	if ((flagMask & VK_QUEUE_TRANSFER_BIT)         != 0) { msg += "VK_QUEUE_TRANSFER_BIT ";         }
-	if ((flagMask & VK_QUEUE_SPARSE_BINDING_BIT)   != 0) { msg += "VK_QUEUE_SPARSE_BINDING_BIT ";   }
-	if ((flagMask & VK_QUEUE_PROTECTED_BIT)        != 0) { msg += "VK_QUEUE_PROTECTED_BIT ";        } // Provided by VK_VERSION_1_1
-	if ((flagMask & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0) { msg += "VK_QUEUE_VIDEO_DECODE_BIT_KHR "; } // Provided by VK_KHR_video_decode_queue
-
-#ifdef VK_ENABLE_BETA_EXTENSIONS
-	if ((flagMask & 0x00000040) != 0) { msg += "VK_QUEUE_VIDEO_ENCODE_BIT_KHR "; } // Provided by VK_KHR_video_encode_queue
-#endif
-
-	if ((flagMask & VK_QUEUE_OPTICAL_FLOW_BIT_NV) != 0) { msg += "VK_QUEUE_OPTICAL_FLOW_BIT_NV ";  } // Provided by VK_NV_optical_flow
-
-	return msg;
-}
-
-/*
-// Method to return a human-readable error message from a VkResult
-// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkResult.html
-string getFriendlyResultString(VkResult result)
-{
-	string msg;
-	switch (result)
-	{
-	// NOT errors..
-	case VK_SUCCESS:                              msg = "VK_SUCCESS";                      break;
-	case VK_NOT_READY:                            msg = "VK_NOT_READY";                    break;
-	case VK_TIMEOUT:                              msg = "VK_TIMEOUT";                      break;
-	case VK_EVENT_SET:                            msg = "VK_EVENT_SET";                    break; 
-	case VK_EVENT_RESET:                          msg = "VK_EVENT_RESET";                  break;
-	case VK_INCOMPLETE:                           msg = "VK_INCOMPLETE";                   break;
-
-	// Errors..
-	case VK_ERROR_OUT_OF_HOST_MEMORY:             msg = "VK_ERROR_OUT_OF_HOST_MEMORY";     break;
-	case VK_ERROR_OUT_OF_DEVICE_MEMORY:           msg = "VK_ERROR_OUT_OF_DEVICE_MEMORY";   break;
-	case VK_ERROR_INITIALIZATION_FAILED:          msg = "VK_ERROR_INITIALIZATION_FAILED";  break;
-	case VK_ERROR_DEVICE_LOST:                    msg = "VK_ERROR_DEVICE_LOST";            break;
-	case VK_ERROR_MEMORY_MAP_FAILED:              msg = "VK_ERROR_MEMORY_MAP_FAILED";      break;
-	case VK_ERROR_LAYER_NOT_PRESENT:              msg = "VK_ERROR_LAYER_NOT_PRESENT";      break;
-	case VK_ERROR_EXTENSION_NOT_PRESENT: break;
-	case VK_ERROR_FEATURE_NOT_PRESENT: break;
-	case VK_ERROR_INCOMPATIBLE_DRIVER: break;
-	case VK_ERROR_TOO_MANY_OBJECTS: break;
-	case VK_ERROR_FORMAT_NOT_SUPPORTED: break;
-	case VK_ERROR_FRAGMENTED_POOL: break;
-	case VK_ERROR_UNKNOWN: break;
-	case VK_ERROR_OUT_OF_POOL_MEMORY:             msg = "VK_ERROR_OUT_OF_POOL_MEMORY or VK_ERROR_OUT_OF_POOL_MEMORY_KHR (same enum value)"; break;
-	case VK_ERROR_INVALID_EXTERNAL_HANDLE:        msg = "VK_ERROR_INVALID_EXTERNAL_HANDLE or VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR (same enum value)";  break;
-	case VK_ERROR_FRAGMENTATION: break;
-	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: break;
-	case VK_PIPELINE_COMPILE_REQUIRED: break;
-	case VK_ERROR_SURFACE_LOST_KHR: break;
-	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: break;
-	case VK_SUBOPTIMAL_KHR: break;
-	case VK_ERROR_OUT_OF_DATE_KHR: break;
-	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: break;
-	case VK_ERROR_VALIDATION_FAILED_EXT: break;
-	case VK_ERROR_INVALID_SHADER_NV: break;
-	case VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR: break;
-	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: break;
-	case VK_ERROR_NOT_PERMITTED_KHR: break;
-	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: break;
-	case VK_THREAD_IDLE_KHR: break;
-	case VK_THREAD_DONE_KHR: break;
-	case VK_OPERATION_DEFERRED_KHR: break;
-	case VK_OPERATION_NOT_DEFERRED_KHR: break;
-	case VK_ERROR_COMPRESSION_EXHAUSTED_EXT: break;
-	case VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT: break;
-
-	// E
-
-	// Duplicate enum values... wtf?!?
-	//case VK_ERROR_OUT_OF_POOL_MEMORY_KHR: break;
-	//case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR: break;
-	case VK_ERROR_FRAGMENTATION_EXT: break;
-	case VK_ERROR_NOT_PERMITTED_EXT: break;
-	case VK_ERROR_INVALID_DEVICE_ADDRESS_EXT: break;
-	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS_KHR: break;
-	case VK_PIPELINE_COMPILE_REQUIRED_EXT: break;
-	case VK_ERROR_PIPELINE_COMPILE_REQUIRED_EXT: break;
-	case VK_RESULT_MAX_ENUM: break;
-
-	default: msg = "Unknown VkResult value: " + result;
-	}
-	
-
-	return msg;
-}
-*/
 
 int main()
 {
-	//constexpr bool VERBOSE = true;
+	// Set a flag & use validation layers if this is a debug build.
+	// Note: Although we have `_DEBUG` defined in debug builds, we may want to output code-debugging details (as
+	// opposed to
+	//bool DEBUGGING = false;
 
+
+
+	std::vector<const char*> vulkanLayers;
+#if defined(_DEBUG)
+	vulkanLayers.push_back("VK_LAYER_KHRONOS_validation");
+	//DEBUGGING = true;
+#else
+	// If not debugging we assign nullptr to our vulkanLayers - this way we can always pass it to vulkan functions and it's always the right thing
+	const char* vulkanLayers = nullptr;
+#endif
+
+	// ----- Step 1 -----
 	// Connect to the Vulkan loader library. Note: `LIBRARY_TYPE` is a macro that makes the result a `HMODULE` on Windows and a `void*` on Linux.
 	LIBRARY_TYPE vulkanLibrary;
 	const bool connectedToVulkanLoader = ConnectWithVulkanLoaderLibrary(vulkanLibrary);
@@ -481,7 +178,8 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Connected to Vulkan loader library." << endl; }
 
-	// Load all functions we've specified in `ListOfVulkanFunctions.ink` automatically
+	// ----- Step 2 -----
+	// Load all functions we've specified in `ListOfVulkanFunctions.inl` automatically
 	const bool loadFunctionSuccess = VulkanFunctionLoaders::LoadFunctionExportedFromVulkanLoaderLibrary(vulkanLibrary);
 	if (!loadFunctionSuccess)
 	{
@@ -490,6 +188,7 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Successfully loaded Vulkan loader function." << endl; }
 
+	// ----- Step 3 -----
 	// Load all the global functions
 	const bool loadGlobalFunctionsSuccess = VulkanFunctionLoaders::LoadVulkanGlobalFunctions();
 	if (!loadGlobalFunctionsSuccess)
@@ -499,12 +198,17 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Successfully loaded Vulkan global functions." << endl; }
 
-
-	// Get a count of all the Vulkan instance extensions available
+	// ----- Step 4 -----
+	// Get a count of all the Vulkan instance extensions available..
 	uint32_t instanceExtensionsCount = 0;
 	VkResult result = VK_SUCCESS;
 	// Note: Providing null to the third (`pProperties`) argument makes the `vkEnumerateInstanceExtensionProperties` method fill the count at the 2nd argument with the number of extensions found.
+#if defined(_DEBUG) && defined(USING_VALIDATION_LAYERS)
 	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, nullptr);
+#else
+	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, nullptr);
+#endif
+	
 	if (result != VK_SUCCESS ||	instanceExtensionsCount == 0)
 	{
 		cout << "[FAIL] Could not get the number of Vulkan Instance extensions." << endl;
@@ -512,12 +216,11 @@ int main()
 	}
 	else
 	{
-		if (VERBOSE) { cout << "Found " << instanceExtensionsCount << " Vulkan instance extensions." << endl; }
+		if (VERBOSE) { cout << "[OK] Found " << instanceExtensionsCount << " Vulkan instance extensions." << endl; }
 	}
-
-	// Obtain the details of all available Vulkan instance extensions
+	// ..then obtain the details of all available Vulkan instance extensions.
 	std::vector<VkExtensionProperties> availableExtensions(instanceExtensionsCount);	
-	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, &availableExtensions[0]);
+	result = VulkanFunctionLoaders::vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionsCount, availableExtensions.data());
 	if (result != VK_SUCCESS || instanceExtensionsCount == 0)
 	{
 		std::cout << "[FAIL] Could not enumerate Instance extension details." << std::endl;
@@ -525,9 +228,8 @@ int main()
 	}
 	else
 	{
-		if (VERBOSE)
+		if (VERY_VERBOSE)
 		{
-			std::cout << "Extension details:" << std::endl;
 			for (unsigned int i = 0; i < instanceExtensionsCount; ++i)
 			{
 				cout << "\t" << availableExtensions[i].extensionName << " - version: " << availableExtensions[i].specVersion << endl;
@@ -535,29 +237,77 @@ int main()
 		}
 	}
 
-
-	// Ask to make all the extensions we found available for use.
+	// ----- Step 5 -----
+	// Ask to make all the supported extensions we found available for use.
 	// Note: If we only wanted to make SOME extensions available then we would add them to the desiredExtensions vector directly then
 	// check that they ARE available.
 	// Also: We have this as a pointer because later on when we create a `VkCreateDeviceInfo` object we need a pointer-to-a-pointer to the
 	// list of all desired extensions we wish to load for our logical device (it gets passed to `ppEnabledExtensionNames`)!
-	auto pDesiredExtensions = new std::vector<char const*>(instanceExtensionsCount);
-	for (unsigned int i = 0; i < instanceExtensionsCount; ++i) { (*pDesiredExtensions)[i] = availableExtensions[i].extensionName; }
+	std::vector<char const*> desiredInstanceExtensions;
+	desiredInstanceExtensions.push_back("VK_KHR_device_group_creation");             // 1
+	desiredInstanceExtensions.push_back("VK_KHR_external_fence_capabilities");	      // 2
+	desiredInstanceExtensions.push_back("VK_KHR_external_memory_capabilities");      // 3
+	desiredInstanceExtensions.push_back("VK_KHR_external_semaphore_capabilities");   // 4	
+	desiredInstanceExtensions.push_back("VK_KHR_get_physical_device_properties2");   // 5
+	desiredInstanceExtensions.push_back("VK_KHR_get_surface_capabilities2");         // 6
+	desiredInstanceExtensions.push_back("VK_KHR_surface");                           // 7
+	//desiredInstanceExtensions.push_back("VK_KHR_surface_protected_capabilities");       // 8 - THIS IS THE ONE THAT'S CAUSING ISSUES! NOT USING FOR NOW!
+	desiredInstanceExtensions.push_back("VK_KHR_win32_surface");                     // 9
+	desiredInstanceExtensions.push_back("VK_EXT_debug_report");                      // 10
+	desiredInstanceExtensions.push_back("VK_EXT_debug_utils");                       // 11
+	desiredInstanceExtensions.push_back("VK_EXT_swapchain_colorspace");              // 12
+	desiredInstanceExtensions.push_back("VK_NV_external_memory_capabilities");       // 13
+	desiredInstanceExtensions.push_back("VK_KHR_portability_enumeration");           // 14
+	desiredInstanceExtensions.push_back("VK_LUNARG_direct_driver_loading");          // 15
 
-	// Check that all the desired extensions are available. If a desiredExtension was "DoesNotExist" or such then we'll return a failure code.
-	for (unsigned int i = 0; i < instanceExtensionsCount; ++i)
+	uint32_t numDesiredInstanceExtensions = desiredInstanceExtensions.size();
+	if (VERBOSE)
 	{
-		const bool supported = VulkanFunctionLoaders::IsExtensionSupported(availableExtensions, (*pDesiredExtensions)[i]);
-		if (!supported)
+		cout << "[OK] Requesting " << numDesiredInstanceExtensions << " of the available instance-level extensions." << endl;
+		if (VERY_VERBOSE)
 		{
-			cout << "[FAIL]: Vulkan extension: " << (*pDesiredExtensions)[i] << " is not available." << endl;
-			return -5;
+			for (unsigned int i = 0; i < numDesiredInstanceExtensions; ++i)
+			{
+				cout << "\t" << desiredInstanceExtensions.at(i) << endl;
+			}
 		}
 	}
-	if (VERBOSE) { cout << "[OK] All desired extensions are available." << endl; }
 
+	/*
+	---------- THE ERROR WE GET WHEN WE IMPORT desiredExtension #8 - "VK_KHR_surface_protected_capabilities" ----------
+	[OK] This is a a debug build - about to enable vulkan layers. Count: 1
+	VUID-vkCreateInstance-ppEnabledExtensionNames-01388(ERROR / SPEC): msgNum: -437968512 - Validation Error:
+	[ VUID-vkCreateInstance-ppEnabledExtensionNames-01388 ] Object 0: VK_NULL_HANDLE, type = VK_OBJECT_TYPE_INSTANCE;
+	| MessageID = 0xe5e52180 | Missing extension required by the instance extension VK_KHR_surface_protected_capabilities: VK_VERSION_1_1.
+	The Vulkan spec states: All required extensions for each extension in the VkInstanceCreateInfo::ppEnabledExtensionNames list must also
+	be present in that list
+	(https://vulkan.lunarg.com/doc/view/1.3.246.0/windows/1.3-extensions/vkspec.html#VUID-vkCreateInstance-ppEnabledExtensionNames-01388)
+	Objects: 1
+		[0] 0, type: 1, name: NULL
+	*/
 
-	// Construct the application info required to initialise Vulkan
+	// Check that all the desired extensions are available	
+	if (numDesiredInstanceExtensions > 0)
+	{
+		for (unsigned int desiredExtensionIndex = 0; desiredExtensionIndex < numDesiredInstanceExtensions; ++desiredExtensionIndex)
+		{
+			//cout << "Checking if the following extension is supported: " << pDesiredExtensions->at(i) << endl;
+			const bool supported = VulkanFunctionLoaders::IsExtensionSupported(availableExtensions, desiredInstanceExtensions.at(desiredExtensionIndex));// *pDesiredExtensions)[i]);
+			if (!supported)
+			{
+				cout << "[FAIL]: Vulkan extension: " << desiredInstanceExtensions.at(desiredExtensionIndex) << " is not available." << endl;
+				return -5;
+			}
+		}
+		if (VERBOSE) { cout << "[OK] All " << numDesiredInstanceExtensions << " desired instance extensions are available." << endl; }
+	}
+	else
+	{
+		cout << "[WARNING]: No desired instance extensions requested!" << endl;
+	}
+
+	// ----- Step 6 -----
+	// Construct the application info required to initialise Vulkan.
 	// Note: The application name and engine name properties are used by graphics drivers to twiddle internal driver
 	// settings, typically for specific AAA games.
 	VkApplicationInfo applicationInfo = {
@@ -570,33 +320,34 @@ int main()
 		VK_MAKE_VERSION(1, 0, 0)
 	};
 
-	// Construct the creation info using the above application info.
-	// Note: We provide all the desired extension names as the final argument, assuming there are any (and there should be!)
-	const VkInstanceCreateInfo instanceCreateInfo = {
-		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		nullptr,
-		0,
-		&applicationInfo,
-		0,
-		nullptr,
-		static_cast<uint32_t>(pDesiredExtensions->size()),
-		!pDesiredExtensions->empty() ? pDesiredExtensions->data() : nullptr
-	};
+	// ----- Step 7 -----
+	// Construct the instance creation info using the above application info.
+	auto numVulkanLayers = static_cast<uint32_t>(vulkanLayers.size());
+	if (VERBOSE) { cout << "[OK] About to create `InstanceCreateInfo` with: " << numVulkanLayers << " vulkan layer(s)." << endl; }
+	VkInstanceCreateInfo instanceCreateInfo = {};
+	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	instanceCreateInfo.pNext = nullptr;
+	instanceCreateInfo.flags = 0;
+	instanceCreateInfo.pApplicationInfo = &applicationInfo;
+	instanceCreateInfo.enabledExtensionCount = numDesiredInstanceExtensions; // static_cast<uint32_t>(desiredExtensions.size());
+	instanceCreateInfo.ppEnabledExtensionNames = desiredInstanceExtensions.data();
+	instanceCreateInfo.enabledLayerCount = numVulkanLayers;
+	instanceCreateInfo.ppEnabledLayerNames = numVulkanLayers != 0 ? vulkanLayers.data() : nullptr;
 
-
-	// Actually create the Vulkan instance! Note: The vulkan instance itself is an `opaque handle` - we can't get any details from it directly.
+	// ----- Step 8 -----
+	// Actually create the Vulkan instance! Note: The `VkInstance` returned is an `opaque handle` - we can't get any details from it directly.
 	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkInstance.html
 	VkInstance vulkanInstance;
 	const VkResult instanceCreationResult = VulkanFunctionLoaders::vkCreateInstance(&instanceCreateInfo, nullptr, &vulkanInstance);
 	if (instanceCreationResult != VK_SUCCESS || vulkanInstance == VK_NULL_HANDLE)
 	{
-		cout << "[FAIL] Could not create Vulkan Instance." << endl;
+		cout << "[FAIL] Could not create Vulkan instance." << endl;
 		return -6;
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance created." << endl; }
 
-
-	// Load our instance-level functions
+	// ----- Step 9 -----
+	// Load our instance-level functions.
 	const bool instanceLevelFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctions(vulkanInstance);
 	if (!instanceLevelFunctionsLoaded)
 	{
@@ -605,9 +356,9 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded." << endl; }
 
-
-	// Now load the instance-level functions that are provided by our extensions
-	const bool instanceLevelExtensionFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctionFromExtension(vulkanInstance, (*pDesiredExtensions));
+	// ----- Step 10 -----
+	// Now load the instance-level functions that are provided by our extensions.
+	const bool instanceLevelExtensionFunctionsLoaded = VulkanFunctionLoaders::LoadInstanceLevelFunctionFromExtension(vulkanInstance, desiredInstanceExtensions);
 	if (!instanceLevelExtensionFunctionsLoaded)
 	{
 		cout << "[FAIL]: Vulkan instance level functions could not be loaded from extensions." << endl;
@@ -615,8 +366,8 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Vulkan instance-level functions loaded from extensions." << endl; }
 
-
-	// Enumerate available physical devices (from which we will access LOGICAL devices that will perform our work!)
+	// ----- Step 11 -----
+	// Enumerate available physical devices (from which we will access LOGICAL devices that will perform our work!).
 	// Note: Like our VkInstance, VkPhysicalDevice is an opaque handle.
 	// See: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDevice.html
 	// IMPORTANT: We essentially do this process twice - first to find out how many physical devices we have, and then again to actually
@@ -630,7 +381,7 @@ int main()
 		cout << "[FAIL] Could not enumerate physical devices. Physical devices found: " << physicalDeviceCount << endl;
 		return -9;
 	}
-	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceCount << " physical device(s)." << endl; }	
+	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceCount << " physical device(s)." << endl; }
 
 	std::vector<VkPhysicalDevice> availablePhysicalDevices(physicalDeviceCount);
 	result = VK_SUCCESS;
@@ -641,8 +392,7 @@ int main()
 		return -10;
 	}
 	if (VERBOSE) { cout << "[OK] Populated details of " << physicalDeviceCount << " physical device(s)." << endl; }
-
-
+	
 	// For now we'll only work with the first physical device found so let's keep an easy reference to it
 	if (physicalDeviceCount > 1)
 	{
@@ -650,12 +400,12 @@ int main()
 	}
 	VkPhysicalDevice activePhysicalDevice = availablePhysicalDevices[0];
 
-
-	// Enumerate extension properties on available physical devices.
+	// ----- Step 11 -----
+	// Populate extension properties on available physical devices.
 	// Note: Again we do this as a two-step - first we find the number of extensions for a physical device, then we populate details (p40)
 	uint32_t physicalDeviceExtensionCount = 0;
 	result = VK_SUCCESS;
-	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(availablePhysicalDevices[0], nullptr, &physicalDeviceExtensionCount, nullptr);
+	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(activePhysicalDevice, nullptr, &physicalDeviceExtensionCount, nullptr);
 	if (result != VK_SUCCESS || physicalDeviceExtensionCount == 0)
 	{
 		cout << "[FAIL] Could not enumerate physical device extensions. Physical devices extension count: " << physicalDeviceExtensionCount << endl;
@@ -663,9 +413,9 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Found " << physicalDeviceExtensionCount << " extensions for physical device 0." << endl; }
 
-	std::vector<VkExtensionProperties> physicalDeviceExtensionProperties(physicalDeviceExtensionCount);
+	std::vector<VkExtensionProperties> physicalDeviceExtensions(physicalDeviceExtensionCount);
 	result = VK_SUCCESS;
-	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(availablePhysicalDevices[0], nullptr, &physicalDeviceExtensionCount, physicalDeviceExtensionProperties.data());
+	result = VulkanFunctionLoaders::vkEnumerateDeviceExtensionProperties(availablePhysicalDevices[0], nullptr, &physicalDeviceExtensionCount, physicalDeviceExtensions.data());
 	if (result != VK_SUCCESS || physicalDeviceExtensionCount == 0)
 	{
 		cout << "[FAIL] Could populate physical device 0 extension properties. Physical device 0 extensions found: " << physicalDeviceExtensionCount << endl;
@@ -674,14 +424,13 @@ int main()
 	if (VERBOSE) { cout << "[OK] Populated " << physicalDeviceExtensionCount << " extension properties for physical device 0." << endl; }
 	if (VERY_VERBOSE)
 	{
-		cout << "----- Extensions found ------" << endl;
-		for (auto &pdeProperty : physicalDeviceExtensionProperties)
+		for (auto &pdeProperty : physicalDeviceExtensions)
 		{
 			cout << "\t" << pdeProperty.extensionName << " - version: " << pdeProperty.specVersion << endl;
 		}
-	}
-		
+	}		
 
+	// ----- Step 12 -----
 	// Get features and properties of physical devices
 	VkPhysicalDeviceFeatures activePhysicalDeviceFeatures;
 	VkPhysicalDeviceProperties activePhysicalDeviceProperties;
@@ -689,10 +438,11 @@ int main()
 	VulkanFunctionLoaders::vkGetPhysicalDeviceProperties(activePhysicalDevice, &activePhysicalDeviceProperties);
 	if (VERY_VERBOSE)
 	{
-		printPhysicalDeviceFeatures(activePhysicalDeviceFeatures);
-		printPhysicalDeviceProperties(activePhysicalDeviceProperties);
+		VulkanHelpers::printPhysicalDeviceFeatures(activePhysicalDeviceFeatures);
+		VulkanHelpers::printPhysicalDeviceProperties(activePhysicalDeviceProperties);
 	}
 
+	// ----- Step 13 -----
 	// Get details of queue families - in familiar style, we'll do this as a two-step where we first get the number of families and then
 	// populate details of each queue family we found.
 	uint32_t queueFamiliesCount = 0;
@@ -711,28 +461,30 @@ int main()
 	}
 	if (VERBOSE)
 	{
-		cout << "Num. queue families found: " << queueFamiliesCount << endl;
-		
-		for (int i = 0; i < queueFamiliesCount; ++i)
+		cout << "[OK] Queue families found: " << queueFamiliesCount << endl;
+		if (VERY_VERBOSE)
 		{
-			auto granularity = queueFamilies[i].minImageTransferGranularity;
+			for (int i = 0; i < queueFamiliesCount; ++i)
+			{
+				auto granularity = queueFamilies[i].minImageTransferGranularity;
 
-			cout << "Queue family number: " << i << endl;
-			cout << "\tminImageTransferGranularity - Width: " << granularity.width << ", Height: " << granularity.height << ", Depth: " << granularity.depth << endl;
-			cout << "\ttimestampValidBits:                  " << queueFamilies[i].timestampValidBits << endl;
-			cout << "\tqueueCount:                          " << queueFamilies[i].queueCount << endl;
-			cout << "\tqueueFlags:                          " << getFriendlyQueueFlags(queueFamilies[i].queueFlags) << endl;
+				cout << "Queue family index: " << i << endl;
+				cout << "\tminImageTransferGranularity - Width: " << granularity.width << ", Height: " << granularity.height << ", Depth: " << granularity.depth << endl;
+				cout << "\ttimestampValidBits:                  " << queueFamilies[i].timestampValidBits << endl;
+				cout << "\tqueueCount:                          " << queueFamilies[i].queueCount << endl;
+				cout << "\tqueueFlags:                          " << VulkanHelpers::getFriendlyQueueFlags(queueFamilies[i].queueFlags) << endl;
+			}
 		}
 	}
 
-
+	// ----- Step 15 -----
 	// Now that we have details of the available queue families, we need to choose one that has our desired capabilities - which in this
 	// case will simply be that we want to draw something.	
 	int numSuitableFamiliesFound = 0;
 	VkQueueFamilyProperties activeQueueFamily;
 	uint32_t activeQueueFamilyIndex = 0xffffffff; // Set to max possible value initially to avoid "may be uninitialised" moaning
 	VkQueueFlags desiredCapabilities = VK_QUEUE_GRAPHICS_BIT;
-	string desiredCapabilitiesString = getFriendlyQueueFlags(desiredCapabilities);
+	string desiredCapabilitiesString = VulkanHelpers::getFriendlyQueueFlags(desiredCapabilities);
 	for (int i = 0; i < queueFamiliesCount; ++i)
 	{
 		// If the queue we're looking at has the flag for desired capabilities AND it has a queue available..
@@ -755,87 +507,77 @@ int main()
 	}
 	if (numSuitableFamiliesFound == 0)
 	{
-		cout << "Could not find a suitable queue family with desired capabilities: " << desiredCapabilitiesString << endl;
+		cout << "[FAIL] Could not find a suitable queue family with desired capabilities: " << desiredCapabilitiesString << endl;
 		return -15;
 	}
-	cout << "Found queue family with desired capabilities: " << desiredCapabilitiesString << endl;
-	cout << "Using queue family at index: " << activeQueueFamilyIndex << endl;
-
-
-	// Now we'll create the logical device (on our chosen physical device) which will actually perform our work.
+	if (VERBOSE)
+	{
+		cout << "[OK] Found queue family with desired capabilities: " << desiredCapabilitiesString << endl;
+		cout << "[OK] Using queue family at index: " << activeQueueFamilyIndex << endl;
+		cout << "[OK] Active queue family queue count is: " << activeQueueFamily.queueCount << endl;
+	}
+	
+	// ----- Step 15 -----
+	// Create our `QueueInfo` struct with the details of the queue we'll use
 	QueueInfo activeQueueInfo;
 	activeQueueInfo.FamilyIndex = activeQueueFamilyIndex;
 	std::vector<float> queuePriorities(activeQueueFamily.queueCount, 0.5f); // Fill the vector of queue priorities w/ a value (multiple same values is OK)
 	activeQueueInfo.Priorities = queuePriorities;
-
+	
+	// ----- Step 16 -----
 	// Create the `DeviceQueueCreateInfo` structure.
 	// CAREFUL: Normally we'd create a vector of `VkDeviceCreateInfo` but because we're using only a single physical device we can use just one here.
 	// CAREFUL: See the Vulkan Cookbook, p51 for further details.
-	VkDeviceQueueCreateInfo deviceQueueCreateInfo {};
-	deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO; // Be SUPER careful here - we have to use `DEVICE QUEUE CREATE INFO`!
+	VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
+	deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO; // Be careful here - we have to use `DEVICE_QUEUE_CREATE_INFO`!
 	deviceQueueCreateInfo.pNext = nullptr;
 	deviceQueueCreateInfo.flags = 0;
 	deviceQueueCreateInfo.queueFamilyIndex = activeQueueFamilyIndex;
-	deviceQueueCreateInfo.queueFamilyIndex = activeQueueFamily.queueCount;
+	deviceQueueCreateInfo.queueCount = activeQueueFamily.queueCount;
 	deviceQueueCreateInfo.pQueuePriorities = queuePriorities.data();
 
-	// Create a pointer to a vector strings listing all the desired extensions we wish to create on the logical device
-	// Note: In this instance we'll just add them all, but we could add only individual extensions if we wanted.
-	// TODO: Test out adding only a small number of extensions and then trying to use an extension we DID NOT request to ensure it fails!
-	auto pDesiredExtensionsConstCharVect = new std::vector<char const *>(physicalDeviceExtensionCount);
-	for (int i = 0; i < physicalDeviceExtensionCount; ++i)
-	{
-		(*pDesiredExtensionsConstCharVect)[i] = physicalDeviceExtensionProperties[i].extensionName;
-	}
-	cout << "[OK] Requesting to load: " << pDesiredExtensionsConstCharVect->size() << " extensions." << endl;
+	// ----- Step 17 -----
+	// Create vector of the names of all physical device extensions we wish to load then load them!
+	// IMPORTANT: We NEVER want to load "all physical device extensions" because we cannot legally combine certain combinations of features & extensions!
+	// CAREFUL: If you type ANY of the physical device extension names then bad things will happen!
+	std::vector<char const*> requestedPhysicalDeviceExtensionNames;
+	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_16bit_storage");                // 1
+	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_storage_buffer_storage_class"); // 2 - Required by `VK_KHR_16bit_storage` (1)
 
-	// Create a `DeviceCreateInfo` object - this part is a bit fiddly...
+	if (VERBOSE)
+	{
+		cout << "[OK] Requesting to load: " << requestedPhysicalDeviceExtensionNames.size() << " physical device extensions." << endl;
+		if (VERY_VERBOSE)
+		{			
+			for (unsigned int i = 0; i < numDesiredInstanceExtensions; ++i)
+			{
+				cout << "\t" << requestedPhysicalDeviceExtensionNames.at(i) << endl;
+			}
+		}
+	}
+	
+	// Create a `DeviceCreateInfo` object which we use to construct our logical device
 	VkDeviceCreateInfo deviceCreateInfo {};
-	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Be SUPER careful here, too - we have to use `DEVICE CREATE INFO`!
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Be careful here - we have to use `DEVICE_CREATE_INFO`!
 	deviceCreateInfo.pNext = nullptr;
 	deviceCreateInfo.flags = 0;
-	deviceCreateInfo.queueCreateInfoCount = 1; // This is because we're just using a single physical device for the time being!
+	deviceCreateInfo.queueCreateInfoCount = 1; // Providing `1` as we're just using a single physical device for the time being!
 	deviceCreateInfo.pQueueCreateInfos = &deviceQueueCreateInfo; // This would normally be a pointer to the start of a vector of `QueueCreateInfo`s!
-	deviceCreateInfo.enabledLayerCount = 0;
-	deviceCreateInfo.ppEnabledLayerNames = nullptr;
-	deviceCreateInfo.enabledExtensionCount = pDesiredExtensionsConstCharVect->size(); // As we may be loading only a subset of all available extensions it prolly makes sense to use that as the count rather than `physicalDeviceExtensionCount` which we obtained earlier
-
-	//std::vector<const char*> ppEnabledExtentionNames;
-	//for (int i = 0; i < pDesiredExtensions.size(); ++i)
-		//ppEnabledExtentionNames.push_back(pDesiredExtensions->at(i)->c_str())
-
-	std::vector<const char*> ptrs;
-	for (std::string const& str : (*pDesiredExtensions)) {
-		ptrs.push_back(str.data());
-	}
-	//deviceCreateInfo.ppEnabledExtensionNames = ptrs.data(); // pDesiredExtensions->data(); // Pointer-to-a-pointer e.g., `const char* const *`
-
-	deviceCreateInfo.ppEnabledExtensionNames = pDesiredExtensions->data(); // Pointer-to-a-pointer e.g., `const char* const *`
-	// I THINK THE ABOVE LINE IS THE ISSUE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+	deviceCreateInfo.enabledLayerCount = numVulkanLayers;
+	deviceCreateInfo.ppEnabledLayerNames = numVulkanLayers == 0 ? nullptr : vulkanLayers.data();
+	deviceCreateInfo.enabledExtensionCount = requestedPhysicalDeviceExtensionNames.size();
+	deviceCreateInfo.ppEnabledExtensionNames = requestedPhysicalDeviceExtensionNames.data();
 	deviceCreateInfo.pEnabledFeatures = &activePhysicalDeviceFeatures;
-
-	// FINALLY create the logical device!!
+		
+	// ----- Step 18 -----
+	// Finally, create the logical device!
 	VkDevice logicalDevice;
 	result = VulkanFunctionLoaders::vkCreateDevice(activePhysicalDevice, &deviceCreateInfo, nullptr, &logicalDevice);
 	if (result != VK_SUCCESS)
 	{
-		cout << "[FAIL] Failed to create logical device. VkResult code is: " << result << endl;
+		cout << "[FAIL] Failed to create logical device. VkResult is: " << VulkanHelpers::getFriendlyResultString(result) << endl;
 		return -16;
 	}
-	if (VERBOSE) { cout << "[OK] Successfully created logical device." << endl; }
-
-	
-
-	/*
-	deviceCreateInfo.queueCreateInfoCount = activeQueueFamily.queueCount;
-	deviceCreateInfo.pQueueCreateInfos = activeQueueInfo;
-	deviceCreateInfo.
-	deviceCreateInfo.
-	deviceCreateInfo.
-	*/
-
-
-	
+	if (VERBOSE) { cout << "[OK] Successfully created logical device." << endl; }	
 
 }

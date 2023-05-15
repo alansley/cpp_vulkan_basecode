@@ -32,6 +32,9 @@
     <ClInclude Include="VulkanFunctions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VulkanHelpers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ListOfVulkanFunctions.inl">

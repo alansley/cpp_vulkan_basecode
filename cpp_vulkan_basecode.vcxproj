@@ -170,6 +170,7 @@
     <ClInclude Include="include\vulkan\vk_platform.h" />
     <ClInclude Include="include\vulkan\vulkan.h" />
     <ClInclude Include="VulkanFunctions.h" />
+    <ClInclude Include="VulkanHelpers.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ListOfVulkanFunctions.inl" />
