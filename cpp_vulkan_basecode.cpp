@@ -146,6 +146,34 @@ return false;                                                             \
 		return true;
 	}
 
+	bool LoadDeviceLevelFunction(VkDevice vulkanDevice, char* const name)
+	{
+#define DEVICE_LEVEL_VULKAN_FUNCTION( name ) \
+name = (PFN_##name)vkGetDeviceProcAddr( vulkanDevice, #name ); \
+if( name == nullptr ) { \
+std::cout << "Could not load device-level Vulkan function named: " << #name << std::endl; \
+			return false; \
+}
+#include "ListOfVulkanFunctions.inl"
+	return true;
+	}
+
+	bool LoadDeviceLevelFunctionFromExtension(VkDevice logicalDevice, char const* name, char const* extension, std::vector<char const*> enabledExtensions)
+	{
+#define DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION( name,	extension)                                                    \
+		for (auto &enabledExtension : enabledExtensions) {			                                                      \
+				if (std::string(enabledExtension) == std::string(extension)) {		                                      \
+						name = (PFN_##name)vkGetDeviceProcAddr(logicalDevice, #name);                                     \
+						if (name == nullptr) {							                                                  \
+								std::cout << "Could not load device-level Vulkan function named: " << #name << std::endl; \
+								return false;                                                                             \
+						}                                                                                                 \
+				}                                                                                                         \
+		}
+#include "ListOfVulkanFunctions.inl"
+		return true;
+	}
+
 } // End of namespace VulkanFunctionLoaders
 
 
@@ -388,7 +416,7 @@ int main()
 	result = VulkanFunctionLoaders::vkEnumeratePhysicalDevices(vulkanInstance, &physicalDeviceCount, availablePhysicalDevices.data());
 	if (result != VK_SUCCESS || physicalDeviceCount == 0)
 	{
-		cout << "[FAIL] Could populate details of physical devices. Physical devices found: " << physicalDeviceCount << endl;
+		cout << "[FAIL] Could not populate details of physical devices. Physical devices found: " << physicalDeviceCount << endl;
 		return -10;
 	}
 	if (VERBOSE) { cout << "[OK] Populated details of " << physicalDeviceCount << " physical device(s)." << endl; }
@@ -529,7 +557,7 @@ int main()
 	// CAREFUL: Normally we'd create a vector of `VkDeviceCreateInfo` but because we're using only a single physical device we can use just one here.
 	// CAREFUL: See the Vulkan Cookbook, p51 for further details.
 	VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
-	deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO; // Be careful here - we have to use `DEVICE_QUEUE_CREATE_INFO`!
+	deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO; // Be careful here - we have to use `DEVICE_QUEUE_CREATE_INFO` not `DEVICE_CREATE_INFO`!
 	deviceQueueCreateInfo.pNext = nullptr;
 	deviceQueueCreateInfo.flags = 0;
 	deviceQueueCreateInfo.queueFamilyIndex = activeQueueFamilyIndex;
@@ -557,8 +585,8 @@ int main()
 	}
 	
 	// Create a `DeviceCreateInfo` object which we use to construct our logical device
-	VkDeviceCreateInfo deviceCreateInfo {};
-	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Be careful here - we have to use `DEVICE_CREATE_INFO`!
+	VkDeviceCreateInfo deviceCreateInfo = {};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Be careful here - we have to use `DEVICE_CREATE_INFO` not `DEVICE_QUEUE_CREATE_INFO`!
 	deviceCreateInfo.pNext = nullptr;
 	deviceCreateInfo.flags = 0;
 	deviceCreateInfo.queueCreateInfoCount = 1; // Providing `1` as we're just using a single physical device for the time being!
@@ -578,6 +606,8 @@ int main()
 		cout << "[FAIL] Failed to create logical device. VkResult is: " << VulkanHelpers::getFriendlyResultString(result) << endl;
 		return -16;
 	}
-	if (VERBOSE) { cout << "[OK] Successfully created logical device." << endl; }	
+	if (VERBOSE) { cout << "[OK] Successfully created logical device." << endl; }
+
+	//vkDes
 
 }

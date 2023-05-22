@@ -72,8 +72,19 @@ INSTANCE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkCreateXlibSurfaceKHR, VK_KHR_XCB
 #define DEVICE_LEVEL_VULKAN_FUNCTION(function)
 #endif
 
-// Note: To know if a function is instance-level or device-level, keep in mind that all device-level
+// Note: It is DEVICE LEVEL FUNCTIONS that perform almost all the typical work done in 3D rendering.
+// Also: To know if a function is instance-level or device-level, keep in mind that all device-level
 // functions have their first argument of type VkDevice, VkQueue, or VKCommandBuffer.
+// Also: To avoid the step of `vkGetInstanceProcAdder` redirecting us to the correct function we can
+// use `vkGetDeviceProcAddr` to get each function on each device directly - but this does mean we have
+// to obtain function pointers for each device created in an applications (and as such need a separate
+// list for each logical device - as we can't use functions acquired from one device to perform
+// operations on another device). See: Vulkan Cookbook, p56-57.
+DEVICE_LEVEL_VULKAN_FUNCTION(vkGetDeviceQueue)
+DEVICE_LEVEL_VULKAN_FUNCTION(vkDeviceWaitIdle)
+DEVICE_LEVEL_VULKAN_FUNCTION(vkDestroyDevice)
+DEVICE_LEVEL_VULKAN_FUNCTION(vkCreateBuffer)
+DEVICE_LEVEL_VULKAN_FUNCTION(vkGetBufferMemoryRequirements)
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION
 
@@ -82,4 +93,11 @@ INSTANCE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkCreateXlibSurfaceKHR, VK_KHR_XCB
 #ifndef DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION
 #define DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(function, extension)
 #endif
+
+DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkCreateSwapchainKHR,    VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkGetSwapchainImagesKHR, VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkAcquireNextImageKHR,   VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkQueuePresentKHR,       VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION(vkDestroySwapchainKHR,   VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+
 #undef DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION
