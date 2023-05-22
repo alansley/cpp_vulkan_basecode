@@ -20,10 +20,45 @@ const string EngineName = "ACL_vulkan_engine";
 // Also: When we build for x64 `_WIN32` is still defined - so take this as "We're on Windows" rather than "We're on Windows building in x86 / 32-bit mode"
 #if defined _WIN32
 	#include <Windows.h>
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	/*
+	switch (uMsg)
+	{
+	case WM_SIZE:
+	{
+		int width = LOWORD(lParam);  // Macro to get the low-order word.
+		int height = HIWORD(lParam); // Macro to get the high-order word.
+
+		// Respond to the message:
+		OnSize(hwnd, (UINT)wParam, width, height);
+	}
+	break;
+	}
+	*/
+	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+}
 #endif
 
 //#include "include/vulkan/vk_platform.h"
-#define VK_NO_PROTOTYPES   // In this example we'll load the functions that we need only, rather than pull in all the prototypes from vulkan.h
+//#define VK_NO_PROTOTYPES   // In this example we'll load the functions that we need only, rather than pull in all the prototypes from vulkan.h
+
+#define VK_USE_PLATFORM_WIN32_KHR
+
+
+// Vulkan function loader command
+#ifdef _WIN32
+
+	//#define VK_USE_PLATFORM_WIN32_KHR 1
+	//#include "vulkan_win32.h"
+#elif defined __linux
+	#define VK_USE_PLATFORM_XCB_KHR 1
+//#define VK_USE_PLATFORM_XLIB_KHR // Don't use XLIB on Linux - it's legacy!
+#endif
+
+
 #include "vulkan/vulkan.h" // Note: "vulkan.h" includes "vk_platform.h" amongst other things
 
 // Custom struct for queue details
@@ -31,6 +66,20 @@ struct QueueInfo
 {
 	uint32_t FamilyIndex;
 	std::vector<float> Priorities;
+};
+
+struct WindowParameters {
+#if defined _WIN32 // VK_USE_PLATFORM_WIN32_KHR
+	HINSTANCE HInstance;
+	HWND HWnd;
+#elif defined __linux //VK_USE_PLATFORM_XCB_KHR
+	xcb_connection_t* Connection;
+	xcb_window_t Window;
+
+	// We will NOT use Xlib in Linux as it's legacy! Previous define check was for: VK_USE_PLATFORM_XLIB_KHR
+	//Display* Dpy;
+	//Window Window;
+#endif
 };
 
 constexpr bool VERBOSE      = true;  // Prints out verbose details of what we're doing if true
@@ -51,6 +100,8 @@ constexpr bool VERY_VERBOSE = false; // Prints out additional details of what we
 #elif defined __linux
 	#define LoadFunction dlsym
 #endif
+
+
 
 
 // Method to connect to the Vulkan loader library
@@ -182,10 +233,8 @@ int main()
 {
 	// Set a flag & use validation layers if this is a debug build.
 	// Note: Although we have `_DEBUG` defined in debug builds, we may want to output code-debugging details (as
-	// opposed to
+	// opposed to vulkan debugging details) separately, e.g., even in release builds!
 	//bool DEBUGGING = false;
-
-
 
 	std::vector<const char*> vulkanLayers;
 #if defined(_DEBUG)
@@ -281,13 +330,25 @@ int main()
 	desiredInstanceExtensions.push_back("VK_KHR_get_surface_capabilities2");         // 6
 	desiredInstanceExtensions.push_back("VK_KHR_surface");                           // 7
 	//desiredInstanceExtensions.push_back("VK_KHR_surface_protected_capabilities");       // 8 - THIS IS THE ONE THAT'S CAUSING ISSUES! NOT USING FOR NOW!
-	desiredInstanceExtensions.push_back("VK_KHR_win32_surface");                     // 9
+	//desiredInstanceExtensions.push_back("VK_KHR_win32_surface");                     // 9 - THIS IS SPECIFIC TO WINDOWS! If I try to run this on Linux it won't work!
+	desiredInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+
 	desiredInstanceExtensions.push_back("VK_EXT_debug_report");                      // 10
 	desiredInstanceExtensions.push_back("VK_EXT_debug_utils");                       // 11
 	desiredInstanceExtensions.push_back("VK_EXT_swapchain_colorspace");              // 12
 	desiredInstanceExtensions.push_back("VK_NV_external_memory_capabilities");       // 13
 	desiredInstanceExtensions.push_back("VK_KHR_portability_enumeration");           // 14
 	desiredInstanceExtensions.push_back("VK_LUNARG_direct_driver_loading");          // 15
+
+// Note: NONE OF THESE RUN as none of them are defined at present! That's odd! But we're loading `VK_KHR_win32_surface` so let's just continue..
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+	cout << "Windows surface extension name: " << VK_KHR_WIN32_SURFACE_EXTENSION_NAME << endl;
+#elif defined VK_USE_PLATFORM_XCB_KHR
+	cout << "Linux XCB surface extension name: " << VK_KHR_XCB_SURFACE_EXTENSION_NAME << endl;
+#elif defined VK_USE_PLATFORM_XLIB_KHR
+	cout << "Linux XLIB surface extension name: " << VK_KHR_XLIB_SURFACE_EXTENSION_NAME << endl;
+#endif
+
 
 	uint32_t numDesiredInstanceExtensions = desiredInstanceExtensions.size();
 	if (VERBOSE)
@@ -514,8 +575,19 @@ int main()
 	uint32_t activeQueueFamilyIndex = 0xffffffff; // Set to max possible value initially to avoid "may be uninitialised" moaning
 	VkQueueFlags desiredCapabilities = VK_QUEUE_GRAPHICS_BIT;
 	string desiredCapabilitiesString = VulkanHelpers::getFriendlyQueueFlags(desiredCapabilities);
-	uint32_t numDesiredQueues = 1; // From a given queue family we may ask for a subset of all available queues (like if it can provide 16 queues, we may only ask for 3 for example)
+
+	// From a given queue family we may ask for a subset of all available queues (like if it can provide 16 queues, we may only ask for 3 for example)
+	// However, this value is actually the HIGHEST QUEUE INDEX we can ask for, so if we wanted access to queues 1, 3 and 5 this value would have to be
+	// 6 (as it's the highest INDEX value) to accomodate that.
+	uint32_t numDesiredQueues = 6;
+
+	// CAREFUL: Setting this flag to true OVERWRITES the above `numDesiredQueues` and makes us request all queues!
+	// In this example we'll ask for all queues because the flag below is true, but if it's false we'll ask for queues [1,3,5] only, which requires
+	// `numDesiredQueues` to have a value of 6 (the variable name isn't very good because what `numDesiredQueues` means in this case is the index
+	// of the highest queue requested...
 	bool requestAllAvailableQueues = true;
+
+
 	for (int i = 0; i < queueFamiliesCount; ++i)
 	{
 		// If the queue we're looking at has the flag for desired capabilities AND it has a queue available..
@@ -633,13 +705,150 @@ int main()
 
 	// NEXT: Getting a device queue
 
-	VkQueue queue;
-	uint32_t activeQueueNumber = 0;
-	if (activeQueueNumber > activeQueueFamily.queueCount)
-	{
-		cout << "[FAIL] Requested to use active queue at index: " << activeQueueNumber << " but active queue family's queue count is only: " + activeQueueFamily.queueCount << endl;
-		return -17;
+	// ----- Step 19 -----
+	// Get access to all the queues we need
 
+	// We'll start by making a vector containing the index of each queue we want access to.
+	// Note: In this example we'll work from zero up to the requested queue count, but we could ask for various queues like only the ones at [1,3,5] etc,
+	std::vector<uint32_t> requestedQueueIndices = {1, 3, 5};
+	if (requestAllAvailableQueues)
+	{
+		requestedQueueIndices.clear();
+		for (int i = 0; i < numDesiredQueues; ++i)
+		{
+			requestedQueueIndices.push_back(i);
+		}
 	}
-	vkGetDeviceQueue(logicalDevice, activeQueueFamilyIndex, activeQueueNumber, &queue);
+	
+	std::vector<VkQueue> queues(numDesiredQueues);
+	uint32_t activeQueueNumber;
+	for (int i = 0; i < requestedQueueIndices.size(); ++i)
+	{
+		//requestedQueueIndices.push_back(i);
+
+		activeQueueNumber = requestedQueueIndices.at(i);
+		if (activeQueueNumber > activeQueueFamily.queueCount)
+		{
+			cout << "[FAIL] Requested to use active queue at index: " << requestedQueueIndices.at(i) << " but active queue family's available queue count is only: " + activeQueueFamily.queueCount << endl;
+			return -17;
+
+		}
+		vkGetDeviceQueue(logicalDevice, activeQueueFamilyIndex, activeQueueNumber, &queues.at(i));
+		cout << "[OK] Created queue: " << requestedQueueIndices.at(i) << " at queues index: " << i << endl;
+	}
+
+	// NOTE: I skipped "Creating a logical device with geometry	shaders, graphics, and compute queues" on p62 for the time being as I just want to draw
+	// something. Basically you just get all the physical devices, then go through them populating their features via `VkPhysicalDeviceFeatures` then
+	// if you find an appropriate device you keep it.
+
+	// I'm now to page 7
+
+	
+#ifdef _WIN32
+	
+
+	WindowParameters windowParams;
+	windowParams.HInstance = GetModuleHandle(nullptr);
+
+	cout << "INSTAAAAAAAAAAAAAAANNNCE: " << windowParams.HInstance << endl;
+
+	const wchar_t CLASS_NAME[] = L"Sample Window Class";
+
+
+	// We MUST register the window class before we try to create a window of that class!
+	// Thanks for not mentioning that at all Vulkan Cookbook. I've put the WindowProc near the top btw.
+	WNDCLASS wc = { };
+
+	wc.lpfnWndProc = WindowProc;
+	wc.hInstance = windowParams.HInstance;
+	wc.lpszClassName = CLASS_NAME;
+
+	RegisterClass(&wc);
+
+
+
+	/*
+	windowParams.HWnd = CreateWindowEx(0,                              // Optional window styles.
+		CLASS_NAME,                     // Window class
+		L"Learn to Program Windows",    // Window text
+		WS_OVERLAPPEDWINDOW,            // Window style
+
+		// Size and position
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+
+		NULL,       // Parent window    
+		NULL,       // Menu
+		windowParams.HInstance,  // Instance handle
+		NULL        // Additional application data
+	);
+	*/
+	windowParams.HWnd = CreateWindow(CLASS_NAME, L"Testing!", WS_OVERLAPPEDWINDOW, 100, 100, 400, 200, nullptr, nullptr, windowParams.HInstance, nullptr);
+		
+	cout << "HWND IZZZZZZZZ: " << windowParams.HWnd << endl;
+
+	
+
+	//VkWin32SurfaceCreateInfoKHR foo;
+
+	VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
+	surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	surfaceCreateInfo.pNext = nullptr;
+	surfaceCreateInfo.flags = 0;
+	surfaceCreateInfo.hinstance = windowParams.HInstance;
+	surfaceCreateInfo.hwnd = windowParams.HWnd;
+	
+
+	VkSurfaceKHR presentationSurface = VK_NULL_HANDLE;
+
+	result = vkCreateWin32SurfaceKHR(vulkanInstance, &surfaceCreateInfo, nullptr, &presentationSurface);
+	if (result != VK_SUCCESS)
+	{
+		cout << "[FAIL] Error creating Win32 surface: " << VulkanHelpers::getFriendlyResultString(result) << endl;
+		return -18;
+	}
+	cout << "[OK] Successfully created surface." << endl;
+
+
+
+#elif  __linux
+	windowParams.Connection = xcb_connect();
+	windowParams.Window = xcb_generate_id();
+#endif
+
+
+
+	// UP TO HERE! p81
+	// Farrrrrr out - we need to check that our physical device and presentation surface suports drawing now. FFS, didn't we already do that
+	// when we asked for a queue family on a physical device that supports VK_QUEUE_GRAPHICS_BIT?!?!?!?!
+
+
+
+
+	int x;
+	std::cin >> x;
+
+
+	// ----- Clean up -----
+	// Destroy the logical device
+	if (logicalDevice)
+	{
+		vkDestroyDevice(logicalDevice, nullptr);
+	}
+
+	// Destroy the vulkan instance
+	if (vulkanInstance)
+	{
+		vkDestroyInstance(vulkanInstance, nullptr);
+		vulkanInstance = nullptr;
+	}
+
+	// Unload the vulkan library
+#if defined _WIN32
+	FreeLibrary(vulkanLibrary);
+#elif defined __linux
+	dlclose(vulkan_library);
+#endif
+	vulkanLibrary = nullptr;
+	
+	
 }
