@@ -146,19 +146,20 @@ return false;                                                             \
 		return true;
 	}
 
-	bool LoadDeviceLevelFunction(VkDevice vulkanDevice, char* const name)
+	// Method to load a device level function
+	bool LoadDeviceLevelFunction(VkDevice vulkanDevice, char const* name)
 	{
-#define DEVICE_LEVEL_VULKAN_FUNCTION( name ) \
-name = (PFN_##name)vkGetDeviceProcAddr( vulkanDevice, #name ); \
-if( name == nullptr ) { \
+#define DEVICE_LEVEL_VULKAN_FUNCTION( name )                                              \
+name = (PFN_##name)vkGetDeviceProcAddr( vulkanDevice, #name );                            \
+if( name == nullptr ) {                                                                   \
 std::cout << "Could not load device-level Vulkan function named: " << #name << std::endl; \
-			return false; \
+			return false;                                                                 \
 }
 #include "ListOfVulkanFunctions.inl"
 	return true;
 	}
 
-	bool LoadDeviceLevelFunctionFromExtension(VkDevice logicalDevice, char const* name, char const* extension, std::vector<char const*> enabledExtensions)
+	bool LoadDeviceLevelFunctionFromExtension(VkDevice logicalDevice, char const* name, std::vector<char const*> enabledExtensions)
 	{
 #define DEVICE_LEVEL_VULKAN_FUNCTION_FROM_EXTENSION( name,	extension)                                                    \
 		for (auto &enabledExtension : enabledExtensions) {			                                                      \
@@ -513,10 +514,12 @@ int main()
 	uint32_t activeQueueFamilyIndex = 0xffffffff; // Set to max possible value initially to avoid "may be uninitialised" moaning
 	VkQueueFlags desiredCapabilities = VK_QUEUE_GRAPHICS_BIT;
 	string desiredCapabilitiesString = VulkanHelpers::getFriendlyQueueFlags(desiredCapabilities);
+	uint32_t numDesiredQueues = 1; // From a given queue family we may ask for a subset of all available queues (like if it can provide 16 queues, we may only ask for 3 for example)
+	bool requestAllAvailableQueues = true;
 	for (int i = 0; i < queueFamiliesCount; ++i)
 	{
 		// If the queue we're looking at has the flag for desired capabilities AND it has a queue available..
-		if ((queueFamilies[i].queueFlags & desiredCapabilities) != 0 && queueFamilies[i].queueCount > 0)
+		if ((queueFamilies[i].queueFlags & desiredCapabilities) != 0 && queueFamilies[i].queueCount > 0 && queueFamilies[i].queueCount >= numDesiredQueues)
 		{
 			// ..then if we haven't already found a suitable queue family we have now! Set it! 
 			if (numSuitableFamiliesFound == 0)
@@ -544,12 +547,22 @@ int main()
 		cout << "[OK] Using queue family at index: " << activeQueueFamilyIndex << endl;
 		cout << "[OK] Active queue family queue count is: " << activeQueueFamily.queueCount << endl;
 	}
+
+	if (requestAllAvailableQueues)
+	{
+		numDesiredQueues = activeQueueFamily.queueCount;
+		cout << "[OK] Requesting access to all available queues. Count: " << numDesiredQueues << endl;
+	}
+	else
+	{
+		cout << "[OK] Although we can request up to " << activeQueueFamily.queueCount << " we are only requesting to use: " << numDesiredQueues << " queues." << endl;
+	}
 	
 	// ----- Step 15 -----
 	// Create our `QueueInfo` struct with the details of the queue we'll use
 	QueueInfo activeQueueInfo;
 	activeQueueInfo.FamilyIndex = activeQueueFamilyIndex;
-	std::vector<float> queuePriorities(activeQueueFamily.queueCount, 0.5f); // Fill the vector of queue priorities w/ a value (multiple same values is OK)
+	std::vector<float> queuePriorities(numDesiredQueues, 0.5f); // Fill the vector of queue priorities w/ a value (multiple same values is OK)
 	activeQueueInfo.Priorities = queuePriorities;
 	
 	// ----- Step 16 -----
@@ -561,13 +574,12 @@ int main()
 	deviceQueueCreateInfo.pNext = nullptr;
 	deviceQueueCreateInfo.flags = 0;
 	deviceQueueCreateInfo.queueFamilyIndex = activeQueueFamilyIndex;
-	deviceQueueCreateInfo.queueCount = activeQueueFamily.queueCount;
+	deviceQueueCreateInfo.queueCount = numDesiredQueues; // .queueCount; // We can ask for a smaller number of queues here, if we wish (instead of ALL queues available) - if we do so we 
 	deviceQueueCreateInfo.pQueuePriorities = queuePriorities.data();
 
 	// ----- Step 17 -----
 	// Create vector of the names of all physical device extensions we wish to load then load them!
 	// IMPORTANT: We NEVER want to load "all physical device extensions" because we cannot legally combine certain combinations of features & extensions!
-	// CAREFUL: If you type ANY of the physical device extension names then bad things will happen!
 	std::vector<char const*> requestedPhysicalDeviceExtensionNames;
 	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_16bit_storage");                // 1
 	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_storage_buffer_storage_class"); // 2 - Required by `VK_KHR_16bit_storage` (1)
@@ -608,6 +620,26 @@ int main()
 	}
 	if (VERBOSE) { cout << "[OK] Successfully created logical device." << endl; }
 
-	//vkDes
+	// Bad function names we can attempt to load to mke sure we handle stuff properly
+	std::vector<char const*> badExtensionNames;
+	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_16bit_storage666");
+	requestedPhysicalDeviceExtensionNames.push_back("VK_KHR_storage_buffer_storage_class_DOES_NOT_EXIST");
 
+	bool boolResult = VulkanFunctionLoaders::LoadDeviceLevelFunction(logicalDevice, requestedPhysicalDeviceExtensionNames[0]);
+	if (!boolResult) cout << "Could not load device level function!" << endl;
+
+	boolResult = VulkanFunctionLoaders::LoadDeviceLevelFunctionFromExtension(logicalDevice, requestedPhysicalDeviceExtensionNames[0], requestedPhysicalDeviceExtensionNames);
+	if (!boolResult) cout << "Could not load device level function from extension!" << endl;
+
+	// NEXT: Getting a device queue
+
+	VkQueue queue;
+	uint32_t activeQueueNumber = 0;
+	if (activeQueueNumber > activeQueueFamily.queueCount)
+	{
+		cout << "[FAIL] Requested to use active queue at index: " << activeQueueNumber << " but active queue family's queue count is only: " + activeQueueFamily.queueCount << endl;
+		return -17;
+
+	}
+	vkGetDeviceQueue(logicalDevice, activeQueueFamilyIndex, activeQueueNumber, &queue);
 }
